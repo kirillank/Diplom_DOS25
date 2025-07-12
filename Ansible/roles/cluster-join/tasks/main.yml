@@ -1,0 +1,10 @@
+- name: Run kubeadm join command
+  command: "{{ hostvars[groups['masters'][0]].join_command }}"
+  args:
+    creates: "{{ kubelet_config_path }}"
+
+- name: Ensure kubelet is running
+  systemd:
+    name: kubelet
+    enabled: true
+    state: started

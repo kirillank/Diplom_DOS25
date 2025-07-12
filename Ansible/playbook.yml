@@ -1,0 +1,18 @@
+#- hosts: k8s
+#  become: yes
+#  roles:
+#    - common
+#    - containerd
+#    - kubernetes
+
+- hosts: masters
+  become: yes
+  roles:
+    - cluster-init
+
+- name: Join worker nodes to Kubernetes cluster
+  hosts: workers
+  become: true
+  roles:
+    - cluster-join
+

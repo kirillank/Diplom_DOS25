@@ -1,0 +1,8 @@
+containerd_url: "https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz"
+runc_url: "https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.amd64"
+cni_plugins_url: "https://github.com/containernetworking/plugins/releases/download/v{{ cni_plugins_version }}/cni-plugins-linux-amd64-v{{ cni_plugins_version }}.tgz"
+
+containerd_config_path: "/etc/containerd/config.toml"
+containerd_service_path: "/etc/systemd/system/containerd.service"
+crictl_config_path: "/etc/crictl.yaml"
+containerd_service_url: "https://raw.githubusercontent.com/containerd/containerd/main/containerd.service"

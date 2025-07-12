@@ -1,0 +1,49 @@
+- name: Create keyrings directory
+  file:
+    path: "{{ kubernetes_keyring_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Add Kubernetes GPG key 
+  get_url:
+    url: https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key
+    dest: "{{ kubernetes_release_key_path }}"
+    mode: '0644'
+
+- name: Convert GPG key to keyring
+  command: >
+    gpg --dearmor -o {{ kubernetes_keyring_path }} {{ kubernetes_release_key_path }}
+  args:
+    creates: "{{ kubernetes_keyring_path }}"
+
+- name: Set permissions for keyring
+  file:
+    path: "{{ kubernetes_keyring_path }}"
+    mode: '0644'
+
+- name: Add Kubernetes apt repository
+  copy:
+    dest: "{{ kubernetes_sources_list_path }}" 
+    content: |
+      deb [signed-by={{ kubernetes_keyring_path }}] {{ kubernetes_repo_url }} /
+    mode: '0644'
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install kubeadm, kubelet, kubectl
+  apt:
+    name:
+      - kubeadm
+      - kubelet
+      - kubectl
+    state: present
+    update_cache: yes
+
+- name: Hold kube packages
+  command: apt-mark hold {{ item }}
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl

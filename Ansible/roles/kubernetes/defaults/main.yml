@@ -1,0 +1,6 @@
+kubernetes_repo_url: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/"
+
+kubernetes_sources_list_path: "/etc/apt/sources.list.d/kubernetes.list"
+kubernetes_keyring_path: "/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+kubernetes_keyring_dir: "/etc/apt/keyrings"
+kubernetes_release_key_path: "{{ kubernetes_keyring_dir }}/kubernetes-release.key"

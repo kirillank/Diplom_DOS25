@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: jenkins
+  labels:
+    app: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      serviceAccountName: jenkins-sa
+      automountServiceAccountToken: false
+
+      nodeSelector:
+        kubernetes.io/hostname: k8s-jenkins
+
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: "OnRootMismatch"
+        runAsNonRoot: true
+
+      volumes:
+        - name: jenkins-data
+          persistentVolumeClaim:
+            claimName: jenkins-pvc
+        - name: jcasc
+          configMap:
+            name: jenkins-jcasc
+        - name: jenkins-secrets
+          secret:
+            secretName: jenkins-secrets
+            defaultMode: 0400
+
+      containers:
+        - name: jenkins
+          image: kirillank04/jenkins:dos25-onl
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+
+          env:
+            - name: CASC_JENKINS_CONFIG
+              value: /var/jenkins_home/casc_configs/jcasc.yaml
+            - name: JENKINS_OPTS
+              value: "--httpPort=8080"
+            - name: JAVA_OPTS
+              value: "-Djenkins.install.runSetupWizard=false -Djava.awt.headless=true"
+          envFrom:
+            - secretRef:
+                name: jenkins-secrets
+
+          volumeMounts:
+            - name: jenkins-data
+              mountPath: /var/jenkins_home
+            - name: jcasc
+              mountPath: /var/jenkins_home/casc_configs
+              readOnly: true
+            - name: jenkins-secrets
+              mountPath: /run/secrets
+              readOnly: true
+
+          securityContext:
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ "ALL" ]
+

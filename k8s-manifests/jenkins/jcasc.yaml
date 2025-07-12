@@ -1,0 +1,40 @@
+#jenkins:
+#  systemMessage: "Автоматически настроен через JCasC"
+#  numExecutors: 2
+#  securityRealm:
+#    local:
+#      allowsSignup: false
+#      users:
+#        - id: admin
+#          password: ${JENKINS_ADMIN_PASSWORD:-admin}
+#  authorizationStrategy:
+#    loggedInUsersCanDoAnything:
+#      allowAnonymousRead: false
+#
+#unclassified:
+#  location:
+#    url: http://jenkins.local
+#    adminAddress: kirillank94@gmail.com
+#
+#credentials:
+#  system:
+#    domainCredentials:
+#      - credentials:
+#          - usernamePassword:
+#              scope: GLOBAL
+#              id: github-credentials
+#              username: ${GITHUB_USERNAME}
+#              password: ${GITHUB_TOKEN}
+#
+#jobs:
+#  - script: >
+#      multibranchPipelineJob('my-app') {
+#        branchSources {
+#          git {
+#            id = 'Diplom_DOS25'
+#            remote('https://github.com/kirillank/Diplom_DOS25.git')
+#            credentialsId('github-credentials')
+#          }
+#        }
+#      }
+
