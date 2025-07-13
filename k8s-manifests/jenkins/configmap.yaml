@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: jenkins-jcasc
   namespace: jenkins
+  labels:
+    app: jenkins
 data:
   jcasc.yaml: |
     jenkins:
@@ -22,33 +24,47 @@ data:
       location:
         url: http://jenkins.local
         adminAddress: kirillank94@gmail.com
-      telegramBotGlobalConfiguration:
-        bots:
-          - botToken: ${TELEGRAM_TOKEN}
-            botName: Alerts
+
+    jobs:
+      - script: |
+          multibranchPipelineJob('example-multibranch') {
+              branchSources {
+                   github {
+                      id('61887015')
+                      repoOwner('kirillank')
+                      repository('Diplom_DOS25') 
+                      scanCredentialsId('github-credentials')
+                   }
+                      configure { node ->
+                          def traits = node / 'source' / 'traits'
+                          traits.appendNode('jenkins.scm.impl.trait.BranchDiscoveryTrait', '')
+                          traits.appendNode('org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait') {
+                              strategyId '1'
+                          }
+                      }
+              }
+              factory {
+                  workflowBranchProjectFactory {
+                      scriptPath('Jenkinsfile')
+                  }
+              }
+          }
 
     credentials:
       system:
         domainCredentials:
           - credentials:
               - usernamePassword:
-                  scope: GLOBAL
                   id: github-credentials
+                  scope: GLOBAL
                   username: ${GITHUB_USERNAME}
                   password: ${GITHUB_TOKEN}
-
-    jobs:
-      - script: >
-          multibranchPipelineJob('my-app') {
-            branchSources {
-              git {
-                id = 'Diplom_DOS25'
-                remote('https://github.com/kirillank/Diplom_DOS25.git')
-                credentialsId('github-credentials')
-              }
-            }
-            triggers {
-              periodicFolderTrigger { interval '1m' } 
-            }
-          }
+              - string:
+                  id: telegram-token
+                  scope: GLOBAL
+                  secret: ${TELEGRAM_TOKEN}
+              - string:
+                  id: github-webhook-secret
+                  scope: GLOBAL
+                  secret: ${GITHUB_WEBHOOK_SECRET}
 

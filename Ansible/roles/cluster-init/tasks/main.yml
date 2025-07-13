@@ -5,12 +5,33 @@
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 
-- name: Set up kubeconfig for {{ ansible_facts.user_id }}
+ #- name: Set up kubeconfig for {{ ansible_facts.user_id }}
+ #  become_user: "{{ ansible_facts.user_id }}"
+ # shell: |
+ #   mkdir -p $HOME/.kube
+ #   sudo cp -i {{ kubeconfig_path }} $HOME/.kube/config
+ #   sudo chown $(id -u):$(id -g) $HOME/.kube/config
+ # run_once: true
+ # delegate_to: "{{ groups['masters'][0] }}"
+
+- name: Set up kubeconfig for user
+  become: yes
   become_user: "{{ ansible_facts.user_id }}"
-  shell: |
-    mkdir -p $HOME/.kube
-    sudo cp -i {{ kubeconfig_path }} $HOME/.kube/config
-    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  block:
+    - name: Ensure .kube directory exists
+      file:
+        path: "~/.kube"
+        state: directory
+        mode: '0755'
+      
+    - name: Copy kubeconfig
+      copy:
+        src: "{{ kubeconfig_path }}"
+        dest: "~/.kube/config"
+        remote_src: yes
+        owner: "{{ ansible_facts.user_id }}"
+        group: "{{ ansible_facts.user_id }}"
+        mode: '0600'
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 

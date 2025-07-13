@@ -19,7 +19,7 @@ spec:
       automountServiceAccountToken: false
 
       nodeSelector:
-        kubernetes.io/hostname: k8s-jenkins
+        role: jenkins
 
       securityContext:
         runAsUser: 1000
@@ -73,4 +73,21 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ "ALL" ]
-
+        
+        - name: webhookrelayd
+          image: webhookrelay/webhookrelayd:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/relayd"]
+          env:
+            - name: KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jenkins-secrets 
+                  key: WEBHOOKRELAY_KEY
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jenkins-secrets
+                  key: WEBHOOKRELAY_SECRET
+            - name: BUCKET
+              value: "Diplom_DOS25"            

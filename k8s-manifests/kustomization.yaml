@@ -1,8 +1,8 @@
 resources:
-  - base
+  # - base
   - ingress-nginx
   - jenkins
   - nodes
-  - app
-  - monitoring
-  - logging
+  # - app
+  # - monitoring
+  # - logging

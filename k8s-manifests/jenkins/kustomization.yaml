@@ -1,3 +1,4 @@
+namespace: jenkins
 resources:
   - namespace.yaml
   - serviceaccount.yaml 
@@ -6,13 +7,12 @@ resources:
   - ingress.yaml
   - jenkins-pvc.yaml
   - jenkins-pv.yaml
-  - secret-github.yaml
   - configmap.yaml
 
 secretGenerator:
   - name: jenkins-secrets
-    namespace: jenkins
     envs:
-      - secrets.env          
+      - secrets.env
 generatorOptions:
-  disableNameSuffixHash: true
+  disableNameSuffixHash: true      
+
