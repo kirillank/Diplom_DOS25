@@ -3,8 +3,6 @@ kind: ConfigMap
 metadata:
   name: jenkins-jcasc
   namespace: jenkins
-  labels:
-    app: jenkins
 data:
   jcasc.yaml: |
     jenkins:
@@ -19,7 +17,6 @@ data:
       authorizationStrategy:
         loggedInUsersCanDoAnything:
           allowAnonymousRead: false
-    
       clouds:
         - kubernetes:
             name: "kubernetes"
@@ -27,53 +24,24 @@ data:
             serverUrl: https://kubernetes.default
             skipTlsVerify: true
             jenkinsUrl: http://jenkins.jenkins.svc.cluster.local
-            podTemplates:
+            templates:
               - name: kaniko
                 label: kaniko
                 containers:
                   - name: kaniko
                     image: gcr.io/kaniko-project/executor:v1.21.0-debug
-                    command:
-                      - /busybox/cat
+                    command: "/busybox/cat"    
                     ttyEnabled: true
                     workingDir: /workspace
                 volumes:
                   - secretVolume:
                       mountPath: /kaniko/.docker
                       secretName: dockerhub-cred
-                      items:
-                        - key: .dockerconfigjson
-                          path: config.json
 
     unclassified:
       location:
         url: http://jenkins.local
         adminAddress: kirillank94@gmail.com
-
-    jobs:
-      - script: |
-          multibranchPipelineJob('example-multibranch') {
-              branchSources {
-                   github {
-                      id('61887015')
-                      repoOwner('kirillank')
-                      repository('Diplom_DOS25') 
-                      scanCredentialsId('github-credentials')
-                   }
-                      configure { node ->
-                          def traits = node / 'source' / 'traits'
-                          traits.appendNode('jenkins.scm.impl.trait.BranchDiscoveryTrait', '')
-                          traits.appendNode('org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait') {
-                              strategyId '1'
-                          }
-                      }
-              }
-              factory {
-                  workflowBranchProjectFactory {
-                      scriptPath('Jenkinsfile')
-                  }
-              }
-          }
 
     credentials:
       system:
@@ -92,5 +60,29 @@ data:
                   id: github-webhook-secret
                   scope: GLOBAL
                   secret: ${GITHUB_WEBHOOK_SECRET}
-    
-                
+
+    jobs:
+      - script: >
+          multibranchPipelineJob('example-multibranch') {
+            branchSources {
+              github {
+                id('61887015')
+                repoOwner('kirillank')
+                repository('Diplom_DOS25')
+                scanCredentialsId('github-credentials')
+              }
+              configure { node ->
+                def traits = node / 'source' / 'traits'
+                traits.appendNode('jenkins.scm.impl.trait.BranchDiscoveryTrait', '')
+                traits.appendNode('org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait') {
+                  strategyId '1'
+                }
+              }
+            }
+            factory {
+              workflowBranchProjectFactory {
+                scriptPath('Jenkinsfile')
+              }
+            }
+          }
+

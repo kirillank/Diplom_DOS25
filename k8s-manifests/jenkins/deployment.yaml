@@ -23,7 +23,7 @@ spec:
         searches:
           - jenkins.svc.cluster.local
       serviceAccountName: jenkins-sa
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
 
       nodeSelector:
         role: jenkins
@@ -46,6 +46,8 @@ spec:
           secret:
             secretName: jenkins-secrets
             defaultMode: 0400
+        - name: run-dir
+          emptyDir: {}
 
       initContainers:
         - name: cleanup-plugins
@@ -84,6 +86,8 @@ spec:
             - name: jenkins-secrets
               mountPath: /run/secrets
               readOnly: true
+            - name: run-dir
+              mountPath: /var/run
 
           securityContext:
             readOnlyRootFilesystem: false

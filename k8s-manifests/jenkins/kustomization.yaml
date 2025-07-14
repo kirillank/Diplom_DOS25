@@ -8,6 +8,9 @@ resources:
   - jenkins-pvc.yaml
   - jenkins-pv.yaml
   - configmap.yaml
+  - role.yaml
+  - rolebinding.yaml
+
 
 secretGenerator:
   - name: jenkins-secrets
@@ -16,9 +19,8 @@ secretGenerator:
 
   - name: dockerhub-cred               
     files:
-      - .dockerconfigjson=config.json
-    type: kubernetes.io/dockerconfigjson
-
+      - config.json=config.json 
+    type: Opaque  
 generatorOptions:
   disableNameSuffixHash: true      
 

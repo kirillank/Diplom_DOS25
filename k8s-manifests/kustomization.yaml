@@ -1,5 +1,5 @@
 resources:
-  - nodes
+    # - nodes
     # - base
   - ingress-nginx
   - jenkins
