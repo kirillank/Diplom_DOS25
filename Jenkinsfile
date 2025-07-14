@@ -19,7 +19,7 @@ pipeline {
     stage('Lint')             { steps { sh "${MVN} validate" } }
     stage('Build')            { steps { sh "${MVN} clean package -DskipTests" } }
     stage('Test')             { steps { sh "${MVN} test" } }
-    stage('Archive Artifact') { steps { archiveArtifacts artifacts: 'target/*.jar', fingerprint: true } }
+    stage('Archive Artifact') { steps { archiveArtifacts artifacts: 'app/target/*.jar', fingerprint: true } }
 
     stage('Build & Push Image') {
       agent {
