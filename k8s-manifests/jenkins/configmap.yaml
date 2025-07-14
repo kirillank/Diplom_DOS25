@@ -38,6 +38,13 @@ data:
                       mountPath: /kaniko/.docker
                       secretName: dockerhub-cred
 
+    tool:
+      jdk:
+        installations:
+          - name: "jdk17"                
+            home: "/opt/java/openjdk" 
+            properties: []               
+
     unclassified:
       location:
         url: http://jenkins.local
