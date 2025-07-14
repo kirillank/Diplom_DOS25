@@ -26,11 +26,11 @@ data:
             jenkinsUrl: http://jenkins.jenkins.svc.cluster.local
             templates:
               - name: kaniko
-                label: kaniko
                 containers:
                   - name: kaniko
-                    image: gcr.io/kaniko-project/executor:v1.21.0-debug
-                    command: "/busybox/cat"    
+                    image: gcr.io/kaniko-project/executor:latest
+                    command:
+                      - /busybox/cat
                     ttyEnabled: true
                     workingDir: /workspace
                 volumes:
