@@ -6,7 +6,7 @@ pipeline {
   }
 
   environment {
-    MVN = ".app/mvnw -f app/pom.xml"
+    MVN = "./app/mvnw -f app/pom.xml"
     IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
   }
 
