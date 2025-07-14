@@ -47,10 +47,20 @@ spec:
             secretName: jenkins-secrets
             defaultMode: 0400
 
+      initContainers:
+        - name: cleanup-plugins
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - rm -rf /var/jenkins_home/plugins
+          volumeMounts:
+            - name: jenkins-data
+              mountPath: /var/jenkins_home
+        
       containers:
         - name: jenkins
           image: kirillank04/jenkins:dos25-onl
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
 

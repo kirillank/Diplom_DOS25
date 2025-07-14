@@ -19,6 +19,31 @@ data:
       authorizationStrategy:
         loggedInUsersCanDoAnything:
           allowAnonymousRead: false
+    
+      clouds:
+        - kubernetes:
+            name: "kubernetes"
+            namespace: jenkins
+            serverUrl: https://kubernetes.default
+            skipTlsVerify: true
+            jenkinsUrl: http://jenkins.jenkins.svc.cluster.local
+            podTemplates:
+              - name: kaniko
+                label: kaniko
+                containers:
+                  - name: kaniko
+                    image: gcr.io/kaniko-project/executor:v1.21.0-debug
+                    command:
+                      - /busybox/cat
+                    ttyEnabled: true
+                    workingDir: /workspace
+                volumes:
+                  - secretVolume:
+                      mountPath: /kaniko/.docker
+                      secretName: dockerhub-cred
+                      items:
+                        - key: .dockerconfigjson
+                          path: config.json
 
     unclassified:
       location:
@@ -67,4 +92,5 @@ data:
                   id: github-webhook-secret
                   scope: GLOBAL
                   secret: ${GITHUB_WEBHOOK_SECRET}
-
+    
+                
