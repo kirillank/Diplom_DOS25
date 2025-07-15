@@ -36,12 +36,13 @@ pipeline {
       steps {
         container('kaniko') {
           unstash 'app'
-          sh 'ls -la app'              
-          sh 'cat app/Dockerfile' 
+          sh 'cp -r app /workspace/'
+          sh 'ls -la /workspace/app'              
+          sh 'cat /workspace/app/Dockerfile' 
 
           sh '''
             /kaniko/executor \
-              --context=dir:app \
+              --context=dir:/workspace/app \
               --dockerfile=app/Dockerfile \
               --destination=${IMAGE} \
               --oci-layout-path=/dev/null
