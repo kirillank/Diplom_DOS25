@@ -30,12 +30,16 @@ pipeline {
       }
       steps {
         container('kaniko') {
+          sh 'ls -la /workspace/app'              
+          sh 'cat /workspace/app/Dockerfile' 
+
           sh '''
             /kaniko/executor \
               --context=dir:/workspace/app \
               --dockerfile=app/Dockerfile \
               --destination=${IMAGE} \
               --oci-layout-path=/dev/null
+              --verbosity=debug
           '''
         }  
       }
