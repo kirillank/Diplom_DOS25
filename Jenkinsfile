@@ -6,7 +6,7 @@ pipeline {
   }
 
   environment {
-    MVN = "./app/mvnw -f app/pom.xml"
+    MVN   = "./app/mvnw -f app/pom.xml"
     IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
   }
 
@@ -15,40 +15,42 @@ pipeline {
   }
 
   stages {
-    stage('Checkout')         { steps { checkout scm } }
-    stage('Lint')             { steps { sh "${MVN} validate" } }
-    stage('Build')            { steps { sh "${MVN} clean package -DskipTests" } }
-    stage('Test')             { steps { sh "${MVN} test" } }
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Lint') {
+      steps { sh "${MVN} validate" }
+    }
+
+    stage('Build') {
+      steps { sh "${MVN} clean package -DskipTests" }
+    }
+
+    stage('Test') {
+      steps { sh "${MVN} test" }
+    }
+
     stage('Archive Artifact') {
       steps {
         archiveArtifacts artifacts: 'app/target/*.jar', fingerprint: true
-        stash name: 'app', includes: 'app/**'
       }
     }
 
     stage('Build & Push Image') {
-      agent {
-        kubernetes {
-          inheritFrom 'kaniko'
-          defaultContainer 'kaniko'
-        }
-      }
       steps {
-        unstash 'app'
-        container('kaniko') {
-          unstash 'app'
-          sh 'ls -la /workspace/app'              
-          sh 'cat /workspace/app/Dockerfile' 
-       
-          sh '''
-            /kaniko/executor \
-              --context=/workspace/app \
-              --dockerfile=/workspace/app/Dockerfile \
-              --destination=${IMAGE} \
-              --oci-layout-path=/dev/null \
-              --verbosity=debug
-          '''
-        }  
+        withCredentials([usernamePassword(
+          credentialsId: 'dockerhub-cred',
+          usernameVariable: 'DOCKERHUB_USERNAME',
+          passwordVariable: 'DOCKERHUB_TOKEN'
+        )]) {
+          sh """
+            ${MVN} compile jib:build \
+              -Dimage=${IMAGE} \
+              -Djib.to.auth.username=${DOCKERHUB_USERNAME} \
+              -Djib.to.auth.password=${DOCKERHUB_TOKEN}
+          """
+        }
       }
     }
 
