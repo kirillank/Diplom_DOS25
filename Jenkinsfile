@@ -37,10 +37,7 @@ pipeline {
               --destination=${IMAGE} \
               --oci-layout-path=/dev/null
           '''
-        }  environment {
-        GOOGLE_APPLICATION_CREDENTIALS = '/kaniko/.docker/config.json'
-      }
-
+        }  
       }
     }
 
