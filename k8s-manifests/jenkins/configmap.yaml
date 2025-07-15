@@ -8,13 +8,14 @@ data:
     jenkins:
       systemMessage: "Автоматически настроен через JCasC"
       numExecutors: 2
-      slaveAgentPort: 50000
+      remotingSecurity:
+        enabled: true
       securityRealm:
         local:
           allowsSignup: false
           users:
             - id: admin
-              password: ${JENKINS_ADMIN_PASSWORD:-admin}
+              password: ${JENKINS_ADMIN_PASSWORD}
       authorizationStrategy:
         loggedInUsersCanDoAnything:
           allowAnonymousRead: false
@@ -24,20 +25,33 @@ data:
             namespace: jenkins
             serverUrl: https://kubernetes.default
             skipTlsVerify: true
-            jenkinsUrl: http://jenkins.jenkins.svc.cluster.local
+            jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080/"
+            jenkinsTunnel: "jenkins.jenkins.svc.cluster.local:50000"
+            webSocket: false
+
             templates:
               - name: kaniko
-                containers:
-                  - name: kaniko
-                    image: gcr.io/kaniko-project/executor:v1.21.0-debug
-                    command: "/busybox/sleep"
-                    args: "1800"
-                    ttyEnabled: true
-                    workingDir: /workspace
+                workspaceVolume:
+                  emptyDirWorkspaceVolume: {}
                 volumes:
                   - secretVolume:
                       mountPath: /kaniko/.docker
                       secretName: dockerhub-cred
+                  - emptyDirVolume:
+                      mountPath: /workspace
+
+                containers:
+                  - name: kaniko
+                    image: gcr.io/kaniko-project/executor:debug
+                    command: "sh -c"
+                    args: "cat"
+                    ttyEnabled: true
+                    workingDir: /workspace
+
+                  - name: jnlp
+                    image: jenkins/inbound-agent:latest
+                    args: '$(JENKINS_SECRET) $(JENKINS_NAME)'
+                    ttyEnabled: true
 
     tool:
       jdk:

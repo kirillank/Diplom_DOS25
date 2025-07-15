@@ -65,7 +65,10 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+              name: http
             - containerPort: 50000
+              name: jnlp
+
 
           env:
             - name: CASC_JENKINS_CONFIG
@@ -73,7 +76,7 @@ spec:
             - name: JENKINS_OPTS
               value: "--httpPort=8080"
             - name: JAVA_OPTS
-              value: "-Djenkins.install.runSetupWizard=false -Djava.awt.headless=true"
+              value: "-Djenkins.websocket.enable=true -Djenkins.install.runSetupWizard=false -Djava.awt.headless=true -Djenkins.slaves.JnlpSlaveAgentProtocol3.enabled=true -Djenkins.model.Jenkins.slaveAgentPort=50000"
           envFrom:
             - secretRef:
                 name: jenkins-secrets

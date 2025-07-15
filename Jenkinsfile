@@ -28,19 +28,19 @@ pipeline {
           defaultContainer 'kaniko'
         }
       }
-      environment {
-        GOOGLE_APPLICATION_CREDENTIALS = '/kaniko/.docker/config.json'
-      }
       steps {
         container('kaniko') {
           sh '''
             /kaniko/executor \
-              --context=dir://workspace/app \
+              --context=dir:/workspace/app \
               --dockerfile=app/Dockerfile \
               --destination=${IMAGE} \
               --oci-layout-path=/dev/null
           '''
-        }
+        }  environment {
+        GOOGLE_APPLICATION_CREDENTIALS = '/kaniko/.docker/config.json'
+      }
+
       }
     }
 
