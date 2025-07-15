@@ -8,3 +8,6 @@ rules:
     resources: ["secrets"]
     verbs: ["get", "list", "watch"]
 
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec"]
+    verbs: ["get", "list", "watch", "create", "delete"]
