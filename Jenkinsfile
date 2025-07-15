@@ -19,7 +19,12 @@ pipeline {
     stage('Lint')             { steps { sh "${MVN} validate" } }
     stage('Build')            { steps { sh "${MVN} clean package -DskipTests" } }
     stage('Test')             { steps { sh "${MVN} test" } }
-    stage('Archive Artifact') { steps { archiveArtifacts artifacts: 'app/target/*.jar', fingerprint: true } }
+    stage('Archive Artifact') {
+      steps {
+        archiveArtifacts artifacts: 'app/target/*.jar', fingerprint: true
+        stash name: 'app', includes: 'app/**'
+      }
+    }
 
     stage('Build & Push Image') {
       agent {
@@ -31,12 +36,12 @@ pipeline {
       steps {
         container('kaniko') {
           unstash 'app'
-          sh 'ls -la /workspace/app'              
-          sh 'cat /workspace/app/Dockerfile' 
+          sh 'ls -la app'              
+          sh 'cat app/Dockerfile' 
 
           sh '''
             /kaniko/executor \
-              --context=dir:/workspace/app \
+              --context=dir:app \
               --dockerfile=app/Dockerfile \
               --destination=${IMAGE} \
               --oci-layout-path=/dev/null
