@@ -30,6 +30,7 @@ data:
                   - name: kaniko
                     image: gcr.io/kaniko-project/executor:v1.21.0-debug
                     command: "/busybox/sleep"
+                    args: "1800"
                     ttyEnabled: true
                     workingDir: /workspace
                 volumes:
