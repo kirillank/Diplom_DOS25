@@ -43,8 +43,8 @@ data:
                 containers:
                   - name: kaniko
                     image: gcr.io/kaniko-project/executor:debug
-                      #command: "sh -c"
-                      #args: "cat"
+                    command: "sleep"
+                    args: "99d"
                     ttyEnabled: true
                     workingDir: /workspace
 

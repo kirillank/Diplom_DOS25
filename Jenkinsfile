@@ -37,14 +37,13 @@ pipeline {
         unstash 'app'
         container('kaniko') {
           unstash 'app'
-          sh 'cp -r app /workspace/'
           sh 'ls -la /workspace/app'              
           sh 'cat /workspace/app/Dockerfile' 
        
           sh '''
             /kaniko/executor \
-              --context=dir:/workspace/app \
-              --dockerfile=app/Dockerfile \
+              --context:/workspace/app \
+              --dockerfile=/workspace/app/Dockerfile \
               --destination=${IMAGE} \
               --oci-layout-path=/dev/null \
               --verbosity=debug
