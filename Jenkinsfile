@@ -46,7 +46,7 @@ pipeline {
               --context=dir:/workspace/app \
               --dockerfile=app/Dockerfile \
               --destination=${IMAGE} \
-              --oci-layout-path=/dev/null
+              --oci-layout-path=/dev/null \
               --verbosity=debug
           '''
         }  
