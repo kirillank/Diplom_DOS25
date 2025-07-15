@@ -15,13 +15,13 @@ spec:
       labels:
         app: jenkins
     spec:
-      dnsPolicy: "None"
-      dnsConfig: 
-        nameservers: 
-          - 8.8.8.8
-          - 1.1.1.1
-        searches:
-          - jenkins.svc.cluster.local
+      dnsPolicy: ClusterFirst
+      # dnsConfig: 
+      #  nameservers: 
+      #    - 8.8.8.8
+      #    - 1.1.1.1
+      #  searches:
+      #    - jenkins.svc.cluster.local
       serviceAccountName: jenkins-sa
       automountServiceAccountToken: true
 

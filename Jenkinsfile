@@ -24,7 +24,7 @@ pipeline {
     stage('Build & Push Image') {
       agent {
         kubernetes {
-          label 'kaniko'
+          inheritFrom 'kaniko'
           defaultContainer 'kaniko'
         }
       }
