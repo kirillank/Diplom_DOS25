@@ -42,7 +42,7 @@ pipeline {
        
           sh '''
             /kaniko/executor \
-              --context:/workspace/app \
+              --context=/workspace/app \
               --dockerfile=/workspace/app/Dockerfile \
               --destination=${IMAGE} \
               --oci-layout-path=/dev/null \
