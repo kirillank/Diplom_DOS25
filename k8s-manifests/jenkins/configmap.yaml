@@ -106,5 +106,10 @@ data:
                 scriptPath('Jenkinsfile')
               }
             }
+            configure { project ->
+              project / triggers / 'com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger' {
+                spec('')
+              }
+            }
           }
 
