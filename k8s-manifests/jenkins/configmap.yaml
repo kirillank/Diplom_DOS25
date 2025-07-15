@@ -8,6 +8,7 @@ data:
     jenkins:
       systemMessage: "Автоматически настроен через JCasC"
       numExecutors: 2
+      slaveAgentPort: 50000
       securityRealm:
         local:
           allowsSignup: false

@@ -65,6 +65,7 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+            - containerPort: 50000
 
           env:
             - name: CASC_JENKINS_CONFIG

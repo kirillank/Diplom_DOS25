@@ -52,9 +52,9 @@ pipeline {
             cd k8s-manifests/app
             kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
           """
-          sh 'kubectl apply -k k8s/app/'
-          sh 'kubectl apply -k k8s/monitoring/'
-          sh 'kubectl apply -k k8s/logging/'
+          sh 'kubectl apply -k k8s-manifests/app/'
+          sh 'kubectl apply -k k8s-manifests/monitoring/'
+          sh 'kubectl apply -k k8s-manifests/logging/'
         }
       }
     }
