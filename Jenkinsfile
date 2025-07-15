@@ -34,8 +34,10 @@ pipeline {
         }
       }
       steps {
+        unstash 'app'
         container('kaniko') {
           unstash 'app'
+          sh 'cp -r app /workspace/'
           sh 'ls -la /workspace/app'              
           sh 'cat /workspace/app/Dockerfile' 
        
