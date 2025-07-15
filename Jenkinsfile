@@ -30,7 +30,7 @@ pipeline {
       }
       steps {
         container('kaniko') {
-          checkout scm
+          unstash 'app'
           sh 'ls -la /workspace/app'              
           sh 'cat /workspace/app/Dockerfile' 
 
