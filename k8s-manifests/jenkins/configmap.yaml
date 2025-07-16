@@ -47,6 +47,12 @@ data:
         url: http://jenkins.local
         adminAddress: kirillank94@gmail.com
 
+    appearance:
+      locale:
+        systemLocale: en
+        ignoreAcceptLanguage: true
+        allowUserPreferences: false
+
     credentials:
       system:
         domainCredentials:
@@ -72,7 +78,7 @@ data:
 
     jobs:
       - script: >
-          multibranchPipelineJob('example-multibranch') {
+          multibranchPipelineJob('Diplom_DOS25') {
             branchSources {
               github {
                 id('61887015')
@@ -94,8 +100,19 @@ data:
               }
             }
             configure { project ->
-              project / triggers / 'com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger' {
+              project / 'triggers' / 'com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger' {
                 spec('')
+              }
+
+              project / 'sources' / 'data' / 'jenkins.branch.BranchSource' / 'source' / 'traits' {
+                appendNode('org.jenkinsci.plugins.github__branch__source.GitHubSCMNavigator$TraitDefaults') {
+                  'suppressAutomaticTriggering'(true)
+                }
+              }
+            }
+            triggers {
+              periodicFolderTrigger {
+                interval('')  
               }
             }
           }
