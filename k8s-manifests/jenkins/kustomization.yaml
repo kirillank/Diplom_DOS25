@@ -18,10 +18,6 @@ secretGenerator:
     envs:
       - secrets.env
 
-  - name: dockerhub-cred               
-    files:
-      - config.json=config.json 
-    type: Opaque  
 generatorOptions:
   disableNameSuffixHash: true      
 

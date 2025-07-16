@@ -38,12 +38,12 @@ pipeline {
 
     stage('Build & Push Image') {
       steps {
-        withCredentials([usernamePassword(
-          credentialsId: 'dockerhub-cred',
-          usernameVariable: 'DOCKERHUB_USERNAME',
-          passwordVariable: 'DOCKERHUB_TOKEN'
-        )]) {
-          script {
+        script {
+          withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-cred',
+            usernameVariable: 'DOCKERHUB_USERNAME',
+            passwordVariable: 'DOCKERHUB_TOKEN'
+          )]) {
 	    def IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
             sh """
               ${MVN} compile jib:build \
