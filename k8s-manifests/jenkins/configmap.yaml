@@ -19,28 +19,31 @@ data:
       authorizationStrategy:
         loggedInUsersCanDoAnything:
           allowAnonymousRead: false
-      # clouds:
-      #  - kubernetes:
-      #      name: "kubernetes"
-      #      namespace: jenkins
-      #      serverUrl: https://kubernetes.default
-      #      skipTlsVerify: true
-      #      jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080/"
-      #      jenkinsTunnel: "jenkins.jenkins.svc.cluster.local:50000"
-      #       webSocket: false
 
-      #     templates:
-      #        - name: jnlp
-      #          image: jenkins/inbound-agent:latest
-      #          args: '$(JENKINS_SECRET) $(JENKINS_NAME)'
-      #          ttyEnabled: true
+      clouds:
+        - kubernetes:
+            name: "kubernetes"
+            namespace: jenkins
+            serverUrl: "https://kubernetes.default"
+            skipTlsVerify: true
+            jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080/"
+            jenkinsTunnel: "jenkins.jenkins.svc.cluster.local:50000"
+            webSocket: false
+            templates:
+              - name: "kubectl-agent"
+                label: "kubectl"
+                containers:
+                  - name: kubectl
+                    image: bitnami/kubectl:latest
+                    command: "cat"
+                    ttyEnabled: true
 
     tool:
       jdk:
         installations:
-          - name: "jdk17"                
-            home: "/opt/java/openjdk" 
-            properties: []               
+          - name: "jdk17"
+            home: "/opt/java/openjdk"
+            properties: []
 
     unclassified:
       location:
@@ -92,6 +95,7 @@ data:
                 traits.appendNode('org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait') {
                   strategyId '1'
                 }
+                traits.appendNode('jenkins.scm.impl.trait.ScmSourceSuppressAutomaticTriggeringTrait', '')
               }
             }
             factory {
@@ -100,19 +104,8 @@ data:
               }
             }
             configure { project ->
-              project / 'triggers' / 'com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger' {
+              project / triggers / 'com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger' {
                 spec('')
-              }
-
-              project / 'sources' / 'data' / 'jenkins.branch.BranchSource' / 'source' / 'traits' {
-                appendNode('org.jenkinsci.plugins.github__branch__source.GitHubSCMNavigator$TraitDefaults') {
-                  'suppressAutomaticTriggering'(true)
-                }
-              }
-            }
-            triggers {
-              periodicFolderTrigger {
-                interval('')  
               }
             }
           }
