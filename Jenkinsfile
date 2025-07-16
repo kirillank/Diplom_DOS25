@@ -19,15 +19,15 @@ pipeline {
     }
 
     stage('Lint') {
-      #steps { sh "${MVN} validate" }
+      steps { sh "${MVN} validate" }
     }
 
     stage('Build') {
-      #steps { sh "${MVN} clean package -DskipTests" }
+      steps { sh "${MVN} clean package -DskipTests" }
     }
 
     stage('Test') {
-      #steps { sh "${MVN} test" }
+      steps { sh "${MVN} test" }
     }
 
     stage('Archive Artifact') {
@@ -78,21 +78,6 @@ pipeline {
       }
     }
 	  
-    #stage('Deploy to Kubernetes') {
-      #when { branch 'main' }
-      #steps {
-        #script {
-          #sh """
-            #cd k8s-manifests/app
-            #kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
-          #"""
-          #sh 'kubectl apply -k k8s-manifests/app/'
-          #sh 'kubectl apply -k k8s-manifests/monitoring/'
-          #sh 'kubectl apply -k k8s-manifests/logging/'
-        #}
-      #}
-    #}
-  #}
 
   post {
     failure {
