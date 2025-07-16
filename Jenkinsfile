@@ -15,19 +15,27 @@ pipeline {
 
   stages {
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
 
     stage('Lint') {
-      steps { sh "${MVN} validate" }
+      steps {
+        sh "${MVN} validate"
+      }
     }
 
     stage('Build') {
-      steps { sh "${MVN} clean package -DskipTests" }
+      steps {
+        sh "${MVN} clean package -DskipTests"
+      }
     }
 
     stage('Test') {
-      steps { sh "${MVN} test" }
+      steps {
+        sh "${MVN} test"
+      }
     }
 
     stage('Archive Artifact') {
@@ -44,7 +52,7 @@ pipeline {
             usernameVariable: 'DOCKERHUB_USERNAME',
             passwordVariable: 'DOCKERHUB_TOKEN'
           )]) {
-	    def IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
+            def IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
             sh """
               ${MVN} compile jib:build \
                 -Dimage=${IMAGE} \
@@ -56,7 +64,7 @@ pipeline {
         }
       }
     }
-    
+
     stage('Deploy to Kubernetes') {
       when { branch 'main' }
       agent {
@@ -65,21 +73,6 @@ pipeline {
           defaultContainer 'kubectl'
         }
       }
-      steps {
-        script {
-          sh """
-            cd k8s-manifests/app
-            kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
-          """
-          sh 'kubectl apply -k k8s-manifests/app/'
-          sh 'kubectl apply -k k8s-manifests/monitoring/'
-          sh 'kubectl apply -k k8s-manifests/logging/'
-        }
-      }
-    }
-
-    stage('Deploy to Kubernetes') {
-      when { branch 'main' }
       steps {
         script {
           sh """
