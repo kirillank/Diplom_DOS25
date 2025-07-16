@@ -56,6 +56,27 @@ pipeline {
         }
       }
     }
+    
+    stage('Deploy to Kubernetes') {
+      when { branch 'main' }
+      agent {
+        kubernetes {
+          label 'kubectl'
+          defaultContainer 'kubectl'
+        }
+      }
+      steps {
+        script {
+          sh """
+            cd k8s-manifests/app
+            kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
+          """
+          sh 'kubectl apply -k k8s-manifests/app/'
+          sh 'kubectl apply -k k8s-manifests/monitoring/'
+          sh 'kubectl apply -k k8s-manifests/logging/'
+        }
+      }
+    }
 
     stage('Deploy to Kubernetes') {
       when { branch 'main' }
