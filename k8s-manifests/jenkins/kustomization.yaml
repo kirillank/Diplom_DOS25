@@ -8,11 +8,16 @@ resources:
   - jenkins-pvc.yaml
   - jenkins-pv.yaml
   - configmap.yaml
+  - role.yaml
+  - rolebinding.yaml
+  - networkpolicy.yaml
+
 
 secretGenerator:
   - name: jenkins-secrets
     envs:
       - secrets.env
+
 generatorOptions:
   disableNameSuffixHash: true      
 

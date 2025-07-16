@@ -9,6 +9,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
+  storageClassName: jenkins-storage      
   selector:
     matchLabels:
       type: local

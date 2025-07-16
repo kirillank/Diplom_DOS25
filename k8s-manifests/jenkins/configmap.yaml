@@ -3,52 +3,55 @@ kind: ConfigMap
 metadata:
   name: jenkins-jcasc
   namespace: jenkins
-  labels:
-    app: jenkins
 data:
   jcasc.yaml: |
     jenkins:
       systemMessage: "Автоматически настроен через JCasC"
       numExecutors: 2
+      remotingSecurity:
+        enabled: true
       securityRealm:
         local:
           allowsSignup: false
           users:
             - id: admin
-              password: ${JENKINS_ADMIN_PASSWORD:-admin}
+              password: ${JENKINS_ADMIN_PASSWORD}
       authorizationStrategy:
         loggedInUsersCanDoAnything:
           allowAnonymousRead: false
+      # clouds:
+      #  - kubernetes:
+      #      name: "kubernetes"
+      #      namespace: jenkins
+      #      serverUrl: https://kubernetes.default
+      #      skipTlsVerify: true
+      #      jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080/"
+      #      jenkinsTunnel: "jenkins.jenkins.svc.cluster.local:50000"
+      #       webSocket: false
+
+      #     templates:
+      #        - name: jnlp
+      #          image: jenkins/inbound-agent:latest
+      #          args: '$(JENKINS_SECRET) $(JENKINS_NAME)'
+      #          ttyEnabled: true
+
+    tool:
+      jdk:
+        installations:
+          - name: "jdk17"                
+            home: "/opt/java/openjdk" 
+            properties: []               
 
     unclassified:
       location:
         url: http://jenkins.local
         adminAddress: kirillank94@gmail.com
 
-    jobs:
-      - script: |
-          multibranchPipelineJob('example-multibranch') {
-              branchSources {
-                   github {
-                      id('61887015')
-                      repoOwner('kirillank')
-                      repository('Diplom_DOS25') 
-                      scanCredentialsId('github-credentials')
-                   }
-                      configure { node ->
-                          def traits = node / 'source' / 'traits'
-                          traits.appendNode('jenkins.scm.impl.trait.BranchDiscoveryTrait', '')
-                          traits.appendNode('org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait') {
-                              strategyId '1'
-                          }
-                      }
-              }
-              factory {
-                  workflowBranchProjectFactory {
-                      scriptPath('Jenkinsfile')
-                  }
-              }
-          }
+    appearance:
+      locale:
+        systemLocale: en
+        ignoreAcceptLanguage: true
+        allowUserPreferences: false
 
     credentials:
       system:
@@ -59,6 +62,11 @@ data:
                   scope: GLOBAL
                   username: ${GITHUB_USERNAME}
                   password: ${GITHUB_TOKEN}
+              - usernamePassword:
+                  id: dockerhub-cred
+                  scope: GLOBAL
+                  username: ${DOCKERHUB_USERNAME}
+                  password: ${DOCKERHUB_TOKEN}
               - string:
                   id: telegram-token
                   scope: GLOBAL
@@ -67,4 +75,45 @@ data:
                   id: github-webhook-secret
                   scope: GLOBAL
                   secret: ${GITHUB_WEBHOOK_SECRET}
+
+    jobs:
+      - script: >
+          multibranchPipelineJob('Diplom_DOS25') {
+            branchSources {
+              github {
+                id('61887015')
+                repoOwner('kirillank')
+                repository('Diplom_DOS25')
+                scanCredentialsId('github-credentials')
+              }
+              configure { node ->
+                def traits = node / 'source' / 'traits'
+                traits.appendNode('jenkins.scm.impl.trait.BranchDiscoveryTrait', '')
+                traits.appendNode('org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait') {
+                  strategyId '1'
+                }
+              }
+            }
+            factory {
+              workflowBranchProjectFactory {
+                scriptPath('Jenkinsfile')
+              }
+            }
+            configure { project ->
+              project / 'triggers' / 'com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger' {
+                spec('')
+              }
+
+              project / 'sources' / 'data' / 'jenkins.branch.BranchSource' / 'source' / 'traits' {
+                appendNode('org.jenkinsci.plugins.github__branch__source.GitHubSCMNavigator$TraitDefaults') {
+                  'suppressAutomaticTriggering'(true)
+                }
+              }
+            }
+            triggers {
+              periodicFolderTrigger {
+                interval('')  
+              }
+            }
+          }
 

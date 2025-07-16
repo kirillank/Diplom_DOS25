@@ -1,17 +1,84 @@
 pipeline {
   agent any
+
+  tools {
+    jdk 'jdk17'
+  }
+
+  environment {
+    MVN   = "./app/mvnw -f app/pom.xml"
+  }
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
   stages {
-    stage('Lint')      { steps { sh 'echo Lint OK' } }
-    stage('Test')      { steps { sh 'echo Tests OK' } }
-    stage('Package')   { steps { sh 'echo Maven build && touch target/app.jar' } }
-    stage('Image')     { steps { sh 'echo build+push image' } }
-    stage('Deploy') {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Lint') {
+      steps { sh "${MVN} validate" }
+    }
+
+    stage('Build') {
+      steps { sh "${MVN} clean package -DskipTests" }
+    }
+
+    stage('Test') {
+      steps { sh "${MVN} test" }
+    }
+
+    stage('Archive Artifact') {
+      steps {
+        archiveArtifacts artifacts: 'app/target/*.jar', fingerprint: true
+      }
+    }
+
+    stage('Build & Push Image') {
+      steps {
+        script {
+          withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-cred',
+            usernameVariable: 'DOCKERHUB_USERNAME',
+            passwordVariable: 'DOCKERHUB_TOKEN'
+          )]) {
+	    def IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
+            sh """
+              ${MVN} compile jib:build \
+                -Dimage=${IMAGE} \
+                -Djib.to.auth.username=\$DOCKERHUB_USERNAME \
+                -Djib.to.auth.password=\$DOCKERHUB_TOKEN
+            """
+            env.IMAGE = IMAGE
+          }
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
       when { branch 'main' }
       steps {
-        sh 'kubectl apply -k k8s/app/'
-        sh 'kubectl apply -k k8s/monitoring/'
-        sh 'kubectl apply -k k8s/logging/'
+        script {
+          sh """
+            cd k8s-manifests/app
+            kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
+          """
+          sh 'kubectl apply -k k8s-manifests/app/'
+          sh 'kubectl apply -k k8s-manifests/monitoring/'
+          sh 'kubectl apply -k k8s-manifests/logging/'
+        }
       }
+    }
+  }
+
+  post {
+    failure {
+      echo "❌ Build failed: ${BUILD_URL}"
+    }
+    success {
+      echo "✅ Deployed: ${IMAGE}"
     }
   }
 }
