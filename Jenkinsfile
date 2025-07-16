@@ -7,7 +7,6 @@ pipeline {
 
   environment {
     MVN   = "./app/mvnw -f app/pom.xml"
-    IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
   }
 
   options {
@@ -44,11 +43,12 @@ pipeline {
           usernameVariable: 'DOCKERHUB_USERNAME',
           passwordVariable: 'DOCKERHUB_TOKEN'
         )]) {
+	  def IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
           sh """
             ${MVN} compile jib:build \
               -Dimage=${IMAGE} \
-              -Djib.to.auth.username=${DOCKERHUB_USERNAME} \
-              -Djib.to.auth.password=${DOCKERHUB_TOKEN}
+              -Djib.to.auth.username=\$DOCKERHUB_USERNAME \
+              -Djib.to.auth.password=\$DOCKERHUB_TOKEN
           """
         }
       }

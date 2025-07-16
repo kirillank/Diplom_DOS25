@@ -56,6 +56,11 @@ data:
                   scope: GLOBAL
                   username: ${GITHUB_USERNAME}
                   password: ${GITHUB_TOKEN}
+              - usernamePassword:
+                  id: dockerhub-cred
+                  scope: GLOBAL
+                  username: ${DOCKERHUB_USERNAME}
+                  password: ${DOCKERHUB_TOKEN}
               - string:
                   id: telegram-token
                   scope: GLOBAL
