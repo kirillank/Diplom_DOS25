@@ -15,15 +15,15 @@ spec:
       labels:
         app: jenkins
     spec:
-      dnsPolicy: "None"
-      dnsConfig: 
-        nameservers: 
-          - 8.8.8.8
-          - 1.1.1.1
-        searches:
-          - jenkins.svc.cluster.local
+      dnsPolicy: ClusterFirst
+      # dnsConfig: 
+      #  nameservers: 
+      #    - 8.8.8.8
+      #    - 1.1.1.1
+      #  searches:
+      #    - jenkins.svc.cluster.local
       serviceAccountName: jenkins-sa
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
 
       nodeSelector:
         role: jenkins
@@ -46,13 +46,29 @@ spec:
           secret:
             secretName: jenkins-secrets
             defaultMode: 0400
+        - name: run-dir
+          emptyDir: {}
 
+      initContainers:
+        - name: cleanup-plugins
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - rm -rf /var/jenkins_home/plugins
+          volumeMounts:
+            - name: jenkins-data
+              mountPath: /var/jenkins_home
+        
       containers:
         - name: jenkins
           image: kirillank04/jenkins:dos25-onl
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
+              name: http
+            - containerPort: 50000
+              name: jnlp
+
 
           env:
             - name: CASC_JENKINS_CONFIG
@@ -60,7 +76,7 @@ spec:
             - name: JENKINS_OPTS
               value: "--httpPort=8080"
             - name: JAVA_OPTS
-              value: "-Djenkins.install.runSetupWizard=false -Djava.awt.headless=true"
+              value: "-Djenkins.websocket.enable=true -Djenkins.install.runSetupWizard=false -Djava.awt.headless=true -Djenkins.slaves.JnlpSlaveAgentProtocol3.enabled=true -Djenkins.model.Jenkins.slaveAgentPort=50000"
           envFrom:
             - secretRef:
                 name: jenkins-secrets
@@ -74,6 +90,8 @@ spec:
             - name: jenkins-secrets
               mountPath: /run/secrets
               readOnly: true
+            - name: run-dir
+              mountPath: /var/run
 
           securityContext:
             readOnlyRootFilesystem: false

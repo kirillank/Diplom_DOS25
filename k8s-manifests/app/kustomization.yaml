@@ -1,4 +1,10 @@
+namespace: app
 resources:
   - deployment.yaml
   - service.yaml
+  - ingress.yaml
+images:
+  - name: IMAGE_PLACEHOLDER    
+    newName: docker.io/kirillank/spring-petclinic
+    newTag: "latest"          
 
