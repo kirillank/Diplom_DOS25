@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spring-petclinic
+  namespace: app
   labels:
     app: spring-petclinic
 spec:
@@ -25,4 +26,6 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: prod
+            - name: SERVER_ADDRESS
+              value: 0.0.0.0
 
