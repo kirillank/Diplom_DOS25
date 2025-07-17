@@ -31,10 +31,11 @@ data:
             webSocket: false
             templates:
               - name: "kubectl-agent"
+                serviceAccount: "jenkins-sa"
                 label: "kubectl"
                 containers:
                   - name: kubectl
-                    image: bitnami/kubectl:latest
+                    image: kirillank04/kubectl-kustomize:latest
                     command: "cat"
                     ttyEnabled: true
 
