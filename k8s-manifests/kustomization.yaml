@@ -1,3 +1,4 @@
 resources:
 - ingress-nginx
 - jenkins
+- base
