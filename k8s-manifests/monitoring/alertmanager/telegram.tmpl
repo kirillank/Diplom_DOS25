@@ -1,0 +1,6 @@
+{{ define "telegram.default" }}
+{{ range .Alerts -}}
+*{{ .Labels.alertname }}* on *{{ .Labels.instance }}*
+{{ .Annotations.summary }}
+{{ end }}
+{{ end }}

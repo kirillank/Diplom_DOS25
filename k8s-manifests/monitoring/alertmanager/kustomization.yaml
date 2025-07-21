@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+
+configMapGenerator:
+  - name: alertmanager-templates
+    files:
+      - telegram.tmpl
+    options:
+      disableNameSuffixHash: true
+
+  - name: alertmanager-vars      
+    envs:
+      - vars.env
+    options:
+      disableNameSuffixHash: true
+
+secretGenerator:
+  - name: alertmanager-telegram
+    envs:
+      - secrets.env
+    type: Opaque
+    options:
+      disableNameSuffixHash: true
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: alertmanager-vars
+      fieldPath: data.TELEGRAM_CHAT_ID
+    targets:
+      - select:
+          kind: ConfigMap
+          name: alertmanager-config
+        fieldPaths: ['data.alertmanager\.yml']
+        options:
+          delimiter: '${CHAT_ID}'

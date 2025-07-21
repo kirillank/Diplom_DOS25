@@ -1,0 +1,17 @@
+groups:
+  - name: deployment.rules
+    rules:
+      - alert: DeploymentRolledOut
+        expr: |
+          (
+            max_over_time(kube_deployment_status_replicas_updated[2m])
+            - kube_deployment_status_replicas_updated
+          ) > 0
+        for: 1m
+        labels:
+          severity: info
+          cluster: prod
+        annotations:
+          summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} rolled out"
+          description: "New replicas detected for deployment {{ $labels.deployment }} in namespace {{ $labels.namespace }}."
+
