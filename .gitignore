@@ -1,2 +1,2 @@
 k8s-manifests/jenkins/secrets.env
- 
+k8s-manifests/monitoring/alertmanager/secrets.env 
