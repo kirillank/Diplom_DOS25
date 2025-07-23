@@ -75,13 +75,20 @@ pipeline {
       }
       steps {
         script {
+          sh 'kubectl apply -k k8s-manifests/monitoring/'
+          sh 'kubectl apply -k k8s-manifests/logging/'
+
+          parallel(
+            "prometheus":   { waitForRollout('deployment','prometheus','monitoring') },
+            "alertmanager": { waitForRollout('deployment','alertmanager','monitoring') },
+            "grafana":      { waitForRollout('deployment','grafana','monitoring') },
+            "node-exporter":{ waitForRollout('daemonset','node-exporter','monitoring') }
+          )
           sh """
             cd k8s-manifests/app
             kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
           """
           sh 'kubectl apply -k k8s-manifests/app/'
-          sh 'kubectl apply -k k8s-manifests/monitoring/'
-          sh 'kubectl apply -k k8s-manifests/logging/'
         }
       }
     }
@@ -95,5 +102,10 @@ pipeline {
       echo "✅ Deployed: ${IMAGE}"
     }
   }
+  def waitForRollout(String kind, String name, String ns, String to='600s') {
+    sh "echo '⏳ waiting for ${kind}/${name}' && \
+        kubectl -n ${ns} rollout status ${kind}/${name} --timeout=${to}"
+  }
 }
+
 

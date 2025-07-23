@@ -24,14 +24,13 @@ spec:
             - --storage.path=/alertmanager
           ports:
             - containerPort: 9093
-          envFrom:
-            - secretRef:
-                name: alertmanager-telegram
           volumeMounts:
             - name: cfg
               mountPath: /etc/alertmanager
             - name: tmpl
               mountPath: /etc/alertmanager/templates
+            - name: secret
+              mountPath: /etc/secrets
       volumes:
         - name: cfg
           configMap:
@@ -42,3 +41,6 @@ spec:
         - name: tmpl
           configMap:
             name: alertmanager-templates
+        - name: secret
+          secret:
+            secretName: alertmanager-telegram

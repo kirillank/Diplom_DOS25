@@ -17,13 +17,17 @@ data:
       group_by: ['alertname','job','instance']
       group_wait: 30s
       group_interval: 5m
-      repeat_interval: 4h
+      repeat_interval: 1h
+      routes:
+      - receiver: telegram
+        matchers:
+          - severity =~ "warning|critical"
 
     receivers:
       - name: telegram
         telegram_configs:
-          - bot_token: ${TELEGRAM_TOKEN}
-            chat_id: ${CHAT_ID}
+          - bot_token_file: /etc/secrets/TELEGRAM_TOKEN
+            chat_id: 415167500
             parse_mode: MarkdownV2
             send_resolved: true
             message: '{{ template "telegram.default" . }}'

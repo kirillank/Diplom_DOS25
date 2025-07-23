@@ -14,12 +14,6 @@ configMapGenerator:
     options:
       disableNameSuffixHash: true
 
-  - name: alertmanager-vars      
-    envs:
-      - vars.env
-    options:
-      disableNameSuffixHash: true
-
 secretGenerator:
   - name: alertmanager-telegram
     envs:
@@ -28,15 +22,3 @@ secretGenerator:
     options:
       disableNameSuffixHash: true
 
-replacements:
-  - source:
-      kind: ConfigMap
-      name: alertmanager-vars
-      fieldPath: data.TELEGRAM_CHAT_ID
-    targets:
-      - select:
-          kind: ConfigMap
-          name: alertmanager-config
-        fieldPaths: ['data.alertmanager\.yml']
-        options:
-          delimiter: '${CHAT_ID}'

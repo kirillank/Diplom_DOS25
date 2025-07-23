@@ -15,7 +15,6 @@ spec:
         app: node-exporter
     spec:
       hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       tolerations:
         - key: "node-role.kubernetes.io/master"
           operator: "Exists"
