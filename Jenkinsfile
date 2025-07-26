@@ -1,3 +1,8 @@
+def waitForRollout(String kind, String name, String ns, String to = '600s') {
+  sh "echo '⏳ waiting for ${kind}/${name} in ${ns}'"
+  sh "kubectl -n ${ns} rollout status ${kind}/${name} --timeout=${to}"
+}
+
 pipeline {
   agent any
 
@@ -6,7 +11,7 @@ pipeline {
   }
 
   environment {
-    MVN   = "./app/mvnw -f app/pom.xml"
+    MVN = "./app/mvnw -f app/pom.xml"
   }
 
   options {
@@ -65,24 +70,74 @@ pipeline {
       }
     }
 
-    stage('Deploy to Kubernetes') {
+    stage('Deploy Monitoring') {
       when { branch 'main' }
       agent {
-        kubernetes {
-          label 'kubectl'
-          defaultContainer 'kubectl'
-        }
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
       }
       steps {
-        script {
-          sh """
-            cd k8s-manifests/app
-            kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
-          """
-          sh 'kubectl apply -k k8s-manifests/app/'
-          sh 'kubectl apply -k k8s-manifests/monitoring/'
-          sh 'kubectl apply -k k8s-manifests/logging/'
+        sh 'kubectl apply -k k8s-manifests/monitoring/'
+      }
+    }
+
+    stage('Rollout Monitoring') {
+      when { branch 'main' }
+      parallel {
+        stage('prometheus') {
+          steps { waitForRollout('deployment', 'prometheus', 'monitoring') }
         }
+        stage('alertmanager') {
+          steps { waitForRollout('deployment', 'alertmanager', 'monitoring') }
+        }
+        stage('grafana') {
+          steps { waitForRollout('deployment', 'grafana', 'monitoring') }
+        }
+        stage('node-exporter') {
+          steps { waitForRollout('daemonset', 'node-exporter', 'monitoring') }
+        }
+      }
+    }
+/*
+    stage('Deploy Logging') {
+      when { branch 'main' }
+      agent {
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+      }
+      steps {
+        sh 'chmod +x k8s-manifests/logging/install_elk.sh'
+        sh 'k8s-manifests/logging/install_elk.sh'
+      }
+    }
+
+    stage('Rollout Logging') {
+      when { branch 'main' }
+      parallel {
+        stage('elasticsearch') {
+          steps { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') }
+        }
+        stage('logstash') {
+          steps { waitForRollout('statefulset', 'logstash-logstash', 'elasticsearch') }
+        }
+        stage('filebeat') {
+          steps { waitForRollout('daemonset', 'filebeat-filebeat', 'elasticsearch') }
+        }
+        stage('kibana') {
+          steps { waitForRollout('deployment', 'kibana-kibana', 'elasticsearch') }
+        }
+      }
+    }
+*/
+    stage('Deploy Application') {
+      when { branch 'main' }
+      agent {
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+      }
+      steps {
+        sh """
+          cd k8s-manifests/app
+          kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
+        """
+        sh 'kubectl apply -k k8s-manifests/app/'
       }
     }
   }
