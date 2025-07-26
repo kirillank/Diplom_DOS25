@@ -81,6 +81,7 @@ pipeline {
     }
 
     stage('Rollout Monitoring') {
+      when { branch 'main' }
       parallel {
         stage('prometheus') {
           steps { waitForRollout('deployment', 'prometheus', 'monitoring') }
@@ -109,6 +110,7 @@ pipeline {
     }
 
     stage('Rollout Logging') {
+      when { branch 'main' }
       parallel {
         stage('elasticsearch') {
           steps { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') }
