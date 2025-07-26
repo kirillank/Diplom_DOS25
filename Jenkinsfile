@@ -1,138 +1,153 @@
-def waitForRollout(String kind, String name, String ns, String to='600s') {
-    sh "echo '⏳ waiting for ${kind}/${name} in namespace ${ns}' && " +
-       "kubectl -n ${ns} rollout status ${kind}/${name} --timeout=${to}"
+def waitForRollout(String kind, String name, String ns, String to = '600s') {
+  sh "echo '⏳ waiting for ${kind}/${name} in ${ns}'"
+  sh "kubectl -n ${ns} rollout status ${kind}/${name} --timeout=${to}"
 }
 
 pipeline {
-    agent any
+  agent any
 
-    tools {
-        jdk 'jdk17'
+  tools {
+    jdk 'jdk17'
+  }
+
+  environment {
+    MVN = "./app/mvnw -f app/pom.xml"
+  }
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    environment {
-        MVN   = "./app/mvnw -f app/pom.xml"
+    stage('Lint') {
+      steps {
+        sh "${MVN} validate"
+      }
     }
 
-    options {
-        timeout(time: 30, unit: 'MINUTES')
+    stage('Build') {
+      steps {
+        sh "${MVN} clean package -DskipTests"
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps { checkout scm }
-        }
+    stage('Test') {
+      steps {
+        sh "${MVN} test"
+      }
+    }
 
-        stage('Lint') {
-            steps {
-                sh "${MVN} validate"
-            }
-        }
+    stage('Archive Artifact') {
+      steps {
+        archiveArtifacts artifacts: 'app/target/*.jar', fingerprint: true
+      }
+    }
 
-        stage('Build') {
-            steps {
-                sh "${MVN} clean package -DskipTests"
-            }
+    stage('Build & Push Image') {
+      steps {
+        script {
+          withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-cred',
+            usernameVariable: 'DOCKERHUB_USERNAME',
+            passwordVariable: 'DOCKERHUB_TOKEN'
+          )]) {
+            def IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
+            sh """
+              ${MVN} compile jib:build \
+                -Dimage=${IMAGE} \
+                -Djib.to.auth.username=\$DOCKERHUB_USERNAME \
+                -Djib.to.auth.password=\$DOCKERHUB_TOKEN
+            """
+            env.IMAGE = IMAGE
+          }
         }
+      }
+    }
 
-        stage('Test') {
-            steps {
-                sh "${MVN} test"
-            }
-        }
+    // ────────────────────────────────────────────────────────────────────────────
+    stage('Deploy Monitoring') {
+      when { branch 'main' }
+      agent {
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+      }
+      steps {
+        sh 'kubectl apply -k k8s-manifests/monitoring/'
+      }
+    }
 
-        stage('Archive Artifact') {
-            steps {
-                archiveArtifacts artifacts: 'app/target/*.jar', fingerprint: true
-            }
+    stage('Rollout Monitoring') {
+      parallel {
+        stage('prometheus') {
+          steps { waitForRollout('deployment', 'prometheus', 'monitoring') }
         }
-
-        stage('Build & Push Image') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'dockerhub-cred',
-                        usernameVariable: 'DOCKERHUB_USERNAME',
-                        passwordVariable: 'DOCKERHUB_TOKEN'
-                    )]) {
-                        def IMAGE = "docker.io/${DOCKERHUB_USERNAME}/spring-petclinic:${GIT_COMMIT.substring(0,7)}"
-                        sh """
-                          ${MVN} compile jib:build \
-                            -Dimage=${IMAGE} \
-                            -Djib.to.auth.username=\$DOCKERHUB_USERNAME \
-                            -Djib.to.auth.password=\$DOCKERHUB_TOKEN
-                        """
-                        env.IMAGE = IMAGE
-                    }
-                }
-            }
+        stage('alertmanager') {
+          steps { waitForRollout('deployment', 'alertmanager', 'monitoring') }
         }
-
-        stage('Deploy Monitoring') {
-            when { branch 'main' }
-            agent {
-                kubernetes {
-                    label 'kubectl'
-                    defaultContainer 'kubectl'
-                }
-            }
-            steps {
-                sh 'kubectl apply -k k8s-manifests/monitoring/'
-                parallel(
-                    "prometheus":    { waitForRollout('deployment', 'prometheus',   'monitoring') },
-                    "alertmanager":  { waitForRollout('deployment', 'alertmanager', 'monitoring') },
-                    "grafana":       { waitForRollout('deployment', 'grafana',      'monitoring') },
-                    "node-exporter": { waitForRollout('daemonset',  'node-exporter','monitoring') }
-                )
-            }
+        stage('grafana') {
+          steps { waitForRollout('deployment', 'grafana', 'monitoring') }
         }
+        stage('node-exporter') {
+          steps { waitForRollout('daemonset', 'node-exporter', 'monitoring') }
+        }
+      }
+    }
 /*
-        stage('Deploy Logging') {
-            when { branch 'main' }
-            agent {
-                kubernetes {
-                    label 'kubectl'
-                    defaultContainer 'kubectl'
-                }
-            }
-            steps {
-                sh 'chmod +x k8s-manifests/logging/install_elk.sh'
-                sh 'k8s-manifests/logging/install_elk.sh'
-                
-                parallel(
-                    "elasticsearch": { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') },
-                    "logstash":      { waitForRollout('statefulset', 'logstash-logstash',    'elasticsearch') },
-                    "filebeat":      { waitForRollout('daemonset',  'filebeat-filebeat',    'elasticsearch') },
-                    "kibana":        { waitForRollout('deployment', 'kibana-kibana',        'elasticsearch') }
-                )
-            }
-        }
-*/
-        stage('Deploy Application') {
-            when { branch 'main' }
-            agent {
-                kubernetes {
-                    label 'kubectl'
-                    defaultContainer 'kubectl'
-                }
-            }
-            steps {
-                sh """
-                  cd k8s-manifests/app
-                  kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
-                """
-                sh 'kubectl apply -k k8s-manifests/app/'
-            }
-        }
+    stage('Deploy Logging') {
+      when { branch 'main' }
+      agent {
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+      }
+      steps {
+        sh 'chmod +x k8s-manifests/logging/install_elk.sh'
+        sh 'k8s-manifests/logging/install_elk.sh'
+      }
     }
 
-    post {
-        success {
-            echo "✅ All components deployed successfully: ${IMAGE}"
+    stage('Rollout Logging') {
+      parallel {
+        stage('elasticsearch') {
+          steps { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') }
         }
-        failure {
-            echo "❌ Deployment failed. Check the logs above."
+        stage('logstash') {
+          steps { waitForRollout('statefulset', 'logstash-logstash', 'elasticsearch') }
         }
+        stage('filebeat') {
+          steps { waitForRollout('daemonset', 'filebeat-filebeat', 'elasticsearch') }
+        }
+        stage('kibana') {
+          steps { waitForRollout('deployment', 'kibana-kibana', 'elasticsearch') }
+        }
+      }
     }
+*/
+    stage('Deploy Application') {
+      when { branch 'main' }
+      agent {
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+      }
+      steps {
+        sh """
+          cd k8s-manifests/app
+          kustomize edit set image IMAGE_PLACEHOLDER=${IMAGE}
+        """
+        sh 'kubectl apply -k k8s-manifests/app/'
+      }
+    }
+  }
+
+  post {
+    failure {
+      echo "❌ Build failed: ${BUILD_URL}"
+    }
+    success {
+      echo "✅ Deployed: ${IMAGE}"
+    }
+  }
 }
 
