@@ -70,7 +70,6 @@ pipeline {
       }
     }
 
-    // ────────────────────────────────────────────────────────────────────────────
     stage('Deploy Monitoring') {
       when { branch 'main' }
       agent {
