@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  labels:
+    app: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      nodeSelector:
+        role: monitoring
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:latest
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+          ports:
+            - containerPort: 9093
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/alertmanager
+            - name: tmpl
+              mountPath: /etc/alertmanager/templates
+            - name: secret
+              mountPath: /etc/secrets
+      volumes:
+        - name: cfg
+          configMap:
+            name: alertmanager-config
+            items:
+              - key: alertmanager.yml
+                path: alertmanager.yml
+        - name: tmpl
+          configMap:
+            name: alertmanager-templates
+        - name: secret
+          secret:
+            secretName: alertmanager-telegram
