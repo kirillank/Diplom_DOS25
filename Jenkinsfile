@@ -86,7 +86,7 @@ pipeline {
                 )
             }
         }
-
+/*
         stage('Deploy Logging') {
             when { branch 'main' }
             agent {
@@ -98,7 +98,7 @@ pipeline {
             steps {
                 sh 'chmod +x k8s-manifests/logging/install_elk.sh'
                 sh 'k8s-manifests/logging/install_elk.sh'
-
+                
                 parallel(
                     "elasticsearch": { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') },
                     "logstash":      { waitForRollout('statefulset', 'logstash-logstash',    'elasticsearch') },
@@ -107,7 +107,7 @@ pipeline {
                 )
             }
         }
-
+*/
         stage('Deploy Application') {
             when { branch 'main' }
             agent {
