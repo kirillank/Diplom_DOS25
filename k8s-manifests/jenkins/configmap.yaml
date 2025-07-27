@@ -35,7 +35,7 @@ data:
                 label: "kubectl"
                 containers:
                   - name: kubectl
-                    image: kirillank04/kubectl-kustomize:latest
+                    image: kirillank04/kubectl-kustomize-helm:latest
                     command: "cat"
                     ttyEnabled: true
 
