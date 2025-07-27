@@ -21,7 +21,7 @@ data:
       routes:
       - receiver: telegram
         matchers:
-          - severity =~ "warning|critical"
+          - severity =~ "info|warning|critical"
 
     receivers:
       - name: telegram
