@@ -47,3 +47,50 @@
     - kubelet
     - kubeadm
     - kubectl
+
+- name: Download kubeseal archive
+  get_url:
+    url: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ kubeseal_version }}/kubeseal-{{ kubeseal_version }}-linux-amd64.tar.gz"
+    dest: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
+    mode: '0644'
+
+- name: Extract kubeseal binary
+  unarchive:
+    src: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Install kubeseal binary
+  copy:
+    src: "/tmp/kubeseal"
+    dest: "/usr/local/bin/kubeseal"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Remove kubeseal archive
+  file:
+    path: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
+    state: absent
+
+- name: Remove temporary kubeseal binary
+  file:
+    path: "/tmp/kubeseal"
+    state: absent
+
+- name: Download Helm install script
+  get_url:
+    url: "{{ helm_install_script_url }}"
+    dest: "{{ helm_install_script_path }}"
+    mode: '0755'
+
+- name: Install Helm
+  command: "{{ helm_install_script_path }}"
+  args:
+    creates: /usr/local/bin/helm
+
+- name: Remove Helm install script
+  file:
+    path: "{{ helm_install_script_path }}"
+    state: absent
+

@@ -9,11 +9,8 @@ resources:
 - jenkins-pv.yaml
 - configmap.yaml
 - clusterrolebinding.yaml
+- sealedsecret.yaml
 
-secretGenerator:
-- envs:
-  - secrets.env
-  name: jenkins-secrets
 
 generatorOptions:
   disableNameSuffixHash: true
