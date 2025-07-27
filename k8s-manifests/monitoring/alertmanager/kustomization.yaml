@@ -6,6 +6,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - configmap.yaml
+  - sealedsecret.yaml
 
 configMapGenerator:
   - name: alertmanager-templates
