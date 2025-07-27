@@ -1,3 +1,8 @@
 cni_pod_network: "10.244.0.0/16"
 flannel_url: "https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
 kubeconfig_path: "/etc/kubernetes/admin.conf"
+
+sealed_secrets_version: "0.30.0"
+sealed_secrets_controller_url: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ sealed_secrets_version }}/controller.yaml"
+
+

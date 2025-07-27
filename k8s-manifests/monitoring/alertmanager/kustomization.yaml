@@ -14,11 +14,4 @@ configMapGenerator:
     options:
       disableNameSuffixHash: true
 
-secretGenerator:
-  - name: alertmanager-telegram
-    envs:
-      - secrets.env
-    type: Opaque
-    options:
-      disableNameSuffixHash: true
 
