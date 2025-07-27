@@ -70,65 +70,69 @@ pipeline {
       }
     }
 
-    stage('Deploy Monitoring') {
+    stage('Monitoring') {
       when { branch 'main' }
       agent {
-        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
-      }
-      steps {
-        sh 'kubectl apply -k k8s-manifests/monitoring/'
-      }
-    }
-
-    stage('Rollout Monitoring') {
-      when { branch 'main' }
-      agent {
-        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
-      }
-      parallel {
-        stage('prometheus') {
-          steps { waitForRollout('deployment', 'prometheus', 'monitoring') }
+        kubernetes {
+          label 'kubectl'
+          defaultContainer 'kubectl'
         }
-        stage('alertmanager') {
-          steps { waitForRollout('deployment', 'alertmanager', 'monitoring') }
+      }
+      stages {
+        stage('Deploy Monitoring') {
+          steps {
+            sh 'kubectl apply -k k8s-manifests/monitoring/'
+          }
         }
-        stage('grafana') {
-          steps { waitForRollout('deployment', 'grafana', 'monitoring') }
-        }
-        stage('node-exporter') {
-          steps { waitForRollout('daemonset', 'node-exporter', 'monitoring') }
+        stage('Rollout Monitoring') {
+          parallel {
+            stage('prometheus') {
+              steps { waitForRollout('deployment', 'prometheus', 'monitoring') }
+            }
+            stage('alertmanager') {
+              steps { waitForRollout('deployment', 'alertmanager', 'monitoring') }
+            }
+            stage('grafana') {
+              steps { waitForRollout('deployment', 'grafana', 'monitoring') }
+            }
+            stage('node-exporter') {
+              steps { waitForRollout('daemonset', 'node-exporter', 'monitoring') }
+            }
+          }
         }
       }
     }
 /*
-    stage('Deploy Logging') {
+    stage('Logging') {
       when { branch 'main' }
       agent {
-        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
-      }
-      steps {
-        sh 'chmod +x k8s-manifests/logging/install_elk.sh'
-        sh 'k8s-manifests/logging/install_elk.sh'
-      }
-    }
-
-    stage('Rollout Logging') {
-      when { branch 'main' }
-      agent {
-        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
-      }
-      parallel {
-        stage('elasticsearch') {
-          steps { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') }
+        kubernetes {
+          label 'kubectl'
+          defaultContainer 'kubectl'
         }
-        stage('logstash') {
-          steps { waitForRollout('statefulset', 'logstash-logstash', 'elasticsearch') }
+      }
+      stages {
+        stage('Deploy Logging') {
+          steps {
+            sh 'chmod +x k8s-manifests/logging/install_elk.sh'
+            sh 'k8s-manifests/logging/install_elk.sh'
+          }
         }
-        stage('filebeat') {
-          steps { waitForRollout('daemonset', 'filebeat-filebeat', 'elasticsearch') }
-        }
-        stage('kibana') {
-          steps { waitForRollout('deployment', 'kibana-kibana', 'elasticsearch') }
+        stage('Rollout Logging') {
+          parallel {
+            stage('elasticsearch') {
+              steps { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') }
+            }
+            stage('logstash') {
+              steps { waitForRollout('statefulset', 'logstash-logstash', 'elasticsearch') }
+            }
+            stage('filebeat') {
+              steps { waitForRollout('daemonset', 'filebeat-filebeat', 'elasticsearch') }
+            }
+            stage('kibana') {
+              steps { waitForRollout('deployment', 'kibana-kibana', 'elasticsearch') }
+            }
+          }
         }
       }
     }
@@ -136,7 +140,10 @@ pipeline {
     stage('Deploy Application') {
       when { branch 'main' }
       agent {
-        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+        kubernetes {
+          label 'kubectl'
+          defaultContainer 'kubectl'
+        }
       }
       steps {
         sh """
