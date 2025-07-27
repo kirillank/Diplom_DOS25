@@ -82,6 +82,9 @@ pipeline {
 
     stage('Rollout Monitoring') {
       when { branch 'main' }
+      agent {
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+      }
       parallel {
         stage('prometheus') {
           steps { waitForRollout('deployment', 'prometheus', 'monitoring') }
@@ -111,6 +114,9 @@ pipeline {
 
     stage('Rollout Logging') {
       when { branch 'main' }
+      agent {
+        kubernetes { label 'kubectl'; defaultContainer 'kubectl' }
+      }
       parallel {
         stage('elasticsearch') {
           steps { waitForRollout('statefulset', 'elasticsearch-master', 'elasticsearch') }
