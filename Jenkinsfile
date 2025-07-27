@@ -102,7 +102,7 @@ pipeline {
         }
       }
     }
-/*
+
     stage('Logging') {
       when { branch 'main' }
       agent {
@@ -136,7 +136,7 @@ pipeline {
         }
       }
     }
-*/
+
     stage('Deploy Application') {
       when { branch 'main' }
       agent {
