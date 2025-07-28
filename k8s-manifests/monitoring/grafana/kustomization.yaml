@@ -6,7 +6,7 @@ resources:
   - ingress.yaml
   - config-datasource.yaml
   - config-dashboard.yaml
-  - secret.yaml
+  - sealedsecret.yaml
 configMapGenerator:
   - name: grafana-dashboards-nodes
     namespace: monitoring

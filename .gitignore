@@ -1,0 +1,3 @@
+k8s-manifests/jenkins/sealedsecret.yaml
+k8s-manifests/monitoring/alertmanager/sealedsecret.yaml
+k8s-manifests/monitoring/grafana/sealedsecret.yaml
