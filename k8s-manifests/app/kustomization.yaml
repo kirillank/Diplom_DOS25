@@ -5,6 +5,6 @@ resources:
   - ingress.yaml
 images:
   - name: IMAGE_PLACEHOLDER    
-    newName: docker.io/kirillank/spring-petclinic
+    newName: docker.io/kirillank04/spring-petclinic
     newTag: "latest"          
 

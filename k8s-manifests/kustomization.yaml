@@ -1,6 +1,6 @@
 resources:
 - base
-  #- nodes
+- nodes
 - ingress-nginx
 - jenkins
 - storage/local-path-provisioner.yaml

@@ -1,6 +1,12 @@
 resources:
   - https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.13.0/deploy/static/provider/cloud/deploy.yaml
 
-patchesStrategicMerge:
-  - service-nodeport.yaml
-  - patch-nodeselector.yaml
+patches:
+  - path: service-nodeport.yaml
+    target:
+      kind: Service
+      name: ingress-nginx-controller
+  - path: patch-nodeselector.yaml
+    target:
+      kind: Deployment
+      name: ingress-nginx-controller

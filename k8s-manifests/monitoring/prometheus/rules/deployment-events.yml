@@ -1,17 +1,11 @@
 groups:
-  - name: deployment.rules
-    rules:
-      - alert: DeploymentRolledOut
-        expr: |
-          (
-            max_over_time(kube_deployment_status_replicas_updated[2m])
-            - kube_deployment_status_replicas_updated
-          ) > 0
-        for: 1m
-        labels:
-          severity: info
-          cluster: prod
-        annotations:
-          summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} rolled out"
-          description: "New replicas detected for deployment {{ $labels.deployment }} in namespace {{ $labels.namespace }}."
-
+- name: app-availability.rules
+  rules:
+  - alert: AppAvailable
+    expr: changes(up{job="spring-petclinic"}[5m]) > 0
+    for: 0m
+    labels:
+      severity: info
+    annotations:
+      summary: "Application is now available"
+      description: "Endpoint /actuator/prometheus is up; first successful scrape detected."
