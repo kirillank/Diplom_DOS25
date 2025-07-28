@@ -18,7 +18,7 @@ spec:
         role: monitoring
       containers:
         - name: alertmanager
-          image: prom/alertmanager:latest
+          image: ALERTMANAGER_IMAGE 
           args:
             - --config.file=/etc/alertmanager/alertmanager.yml
             - --storage.path=/alertmanager

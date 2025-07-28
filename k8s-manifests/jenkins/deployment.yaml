@@ -16,12 +16,6 @@ spec:
         app: jenkins
     spec:
       dnsPolicy: ClusterFirst
-      # dnsConfig: 
-      #  nameservers: 
-      #    - 8.8.8.8
-      #    - 1.1.1.1
-      #  searches:
-      #    - jenkins.svc.cluster.local
       serviceAccountName: jenkins-sa
       automountServiceAccountToken: true
 
@@ -61,7 +55,7 @@ spec:
         
       containers:
         - name: jenkins
-          image: kirillank04/jenkins:dos25-onl
+          image: JENKINS_IMAGE 
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -100,7 +94,7 @@ spec:
               drop: [ "ALL" ]
         
         - name: webhookrelayd
-          image: webhookrelay/webhookrelayd:latest
+          image: WEBHOOK_IMAGE
           imagePullPolicy: IfNotPresent
           command: ["/relayd"]
           env:
