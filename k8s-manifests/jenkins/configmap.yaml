@@ -6,7 +6,7 @@ metadata:
 data:
   jcasc.yaml: |
     jenkins:
-      systemMessage: "Автоматически настроен через JCasC"
+      systemMessage: "CI/CD Pipeline for DevOps Diploma Project"
       numExecutors: 2
       remotingSecurity:
         enabled: true
@@ -35,7 +35,7 @@ data:
                 label: "kubectl"
                 containers:
                   - name: kubectl
-                    image: kirillank04/kubectl-kustomize-helm:latest
+                    image: AGENT_IMAGE 
                     command: "cat"
                     ttyEnabled: true
 
@@ -49,7 +49,7 @@ data:
     unclassified:
       location:
         url: http://jenkins.local
-        adminAddress: kirillank94@gmail.com
+        adminAddress: ${ADMIN_ADDRESS} 
 
     appearance:
       locale:

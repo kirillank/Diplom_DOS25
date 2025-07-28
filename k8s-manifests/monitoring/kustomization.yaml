@@ -7,3 +7,24 @@ resources:
   - node-exporter
   - prometheus
   - grafana
+
+images:
+  - name: ALERTMANAGER_IMAGE
+    newName: prom/alertmanager
+    newTag: latest
+
+  - name: GRAFANA_IMAGE
+    newName: grafana/grafana
+    newTag: latest
+
+  - name: NODE_EXPORTER_IMAGE
+    newName: quay.io/prometheus/node-exporter
+    newTag: v1.8.1
+
+  - name: PROMETHEUS_IMAGE
+    newName: prom/prometheus
+    newTag: latest
+
+
+
+
