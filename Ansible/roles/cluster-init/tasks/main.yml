@@ -79,16 +79,14 @@
   delegate_to: "{{ groups['masters'][0] }}"
   ignore_errors: yes
 
-- name: Remove control‑plane taint to allow system pods on master
+- name: Remove control-plane taint to allow system pods on master
   become: yes
   become_user: "{{ ansible_user }}"
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
-  shell: |
-    kubectl taint nodes {{ groups['masters'][0] }} \
-      node-role.kubernetes.io/control-plane:NoSchedule- --overwrite
-  args:
-    warn: false
+  command: >
+    kubectl taint nodes {{ groups['masters'][0] }}
+    node-role.kubernetes.io/control-plane:NoSchedule- --overwrite
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
   register: taint_result
