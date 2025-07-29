@@ -43,12 +43,9 @@
   delegate_to: "{{ groups['masters'][0] }}"
 
 - name: Install Sealed Secrets controller
-  become: yes
   become_user: "{{ ansible_facts.user_id }}"
   shell: |
     kubectl apply -f {{ sealed_secrets_controller_url }}
-  args:
-    warn: false
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 
