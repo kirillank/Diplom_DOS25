@@ -15,10 +15,12 @@ echo "✅  Ansible installed."
 ###############################################################################
 # 2. Run the Ansible-playbook
 ###############################################################################
-ANSIBLE_PLAYBOOK_PATH="Ansible/playbook.yml"
+ANSIBLE_PLAYBOOK_PATH="playbook.yml"
+cd Ansible
 echo "▶️  Running playbook: $ANSIBLE_PLAYBOOK_PATH"
 ansible-playbook "$ANSIBLE_PLAYBOOK_PATH"
 echo "✅  Playbook finished."
+cd ..
 
 ###############################################################################
 # 3. Generate and seal Secrets (Jenkins / Alertmanager / Grafana)
