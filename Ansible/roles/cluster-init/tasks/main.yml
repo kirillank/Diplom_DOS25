@@ -1,61 +1,132 @@
 - name: Initialize Kubernetes cluster
-  command: kubeadm init --pod-network-cidr={{ cni_pod_network }}
+  become: yes
+  command: >
+    kubeadm init
+      --pod-network-cidr={{ cni_pod_network }}
   args:
-    creates: "{{ kubeconfig_path }}" 
+    creates: "{{ kubeconfig_path }}"
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 
- #- name: Set up kubeconfig for {{ ansible_facts.user_id }}
- #  become_user: "{{ ansible_facts.user_id }}"
- # shell: |
- #   mkdir -p $HOME/.kube
- #   sudo cp -i {{ kubeconfig_path }} $HOME/.kube/config
- #   sudo chown $(id -u):$(id -g) $HOME/.kube/config
- # run_once: true
- # delegate_to: "{{ groups['masters'][0] }}"
-
-- name: Set up kubeconfig for user
+- name: Copy kube‑config to control user
   become: yes
-  become_user: "{{ ansible_facts.user_id }}"
   block:
-    - name: Ensure .kube directory exists
+    - name: Ensure ~/.kube directory exists
       file:
-        path: "~/.kube"
+        path: "/home/{{ ansible_user }}/.kube"
         state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
         mode: '0755'
-      
-    - name: Copy kubeconfig
+
+    - name: Copy admin.conf → ~/.kube/config
       copy:
         src: "{{ kubeconfig_path }}"
-        dest: "~/.kube/config"
+        dest: "/home/{{ ansible_user }}/.kube/config"
         remote_src: yes
-        owner: "{{ ansible_facts.user_id }}"
-        group: "{{ ansible_facts.user_id }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
         mode: '0600'
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 
-- name: Install CNI
-  become_user: "{{ ansible_facts.user_id }}"
-  shell: |
-    kubectl apply -f {{ flannel_url }} 
+- name: Wait for Kubernetes API server to be ready
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+  shell: kubectl cluster-info
+  register: cluster_info
+  until: cluster_info.rc == 0
+  retries: 30
+  delay: 10
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 
-- name: Install Sealed Secrets controller
-  become_user: "{{ ansible_facts.user_id }}"
-  shell: |
-    kubectl apply -f {{ sealed_secrets_controller_url }}
+- name: Wait for all system pods to be ready
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+  shell: kubectl get pods -n kube-system --field-selector=status.phase!=Running --no-headers | wc -l
+  register: not_ready_pods
+  until: not_ready_pods.stdout|int == 0
+  retries: 30
+  delay: 10
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 
-- name: Get join command
+- name: Install Flannel CNI
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+  shell: kubectl apply -f {{ flannel_url }}
+  run_once: true
+  delegate_to: "{{ groups['masters'][0] }}"
+
+- name: Wait for Flannel pods to be ready
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+  shell: kubectl get pods -n kube-flannel --field-selector=status.phase!=Running --no-headers | wc -l
+  register: flannel_not_ready
+  until: flannel_not_ready.stdout|int == 0
+  retries: 30
+  delay: 10
+  run_once: true
+  delegate_to: "{{ groups['masters'][0] }}"
+  ignore_errors: yes
+
+- name: Remove control‑plane taint to allow system pods on master
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+  shell: |
+    kubectl taint nodes {{ groups['masters'][0] }} \
+      node-role.kubernetes.io/control-plane:NoSchedule- --overwrite
+  args:
+    warn: false
+  run_once: true
+  delegate_to: "{{ groups['masters'][0] }}"
+  register: taint_result
+  changed_when: "'taint' in taint_result.stdout"
+
+- name: Deploy Sealed Secrets controller
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+  shell: kubectl apply -f {{ sealed_secrets_controller_url }}
+  run_once: true
+  delegate_to: "{{ groups['masters'][0] }}"
+
+- name: Wait for nodes to be ready
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
+  shell: kubectl get nodes --no-headers | grep -v Ready | wc -l
+  register: not_ready_nodes
+  until: not_ready_nodes.stdout|int == 0
+  retries: 30
+  delay: 10
+  run_once: true
+  delegate_to: "{{ groups['masters'][0] }}"
+
+- name: Get kubeadm join command
+  become: yes
+  become_user: "{{ ansible_user }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/.kube/config"
   shell: kubeadm token create --print-join-command
   register: join_cmd
   run_once: true
   delegate_to: "{{ groups['masters'][0] }}"
 
-- name: Share join command to all hosts
+- name: Share join command with all hosts
   set_fact:
     join_command: "{{ join_cmd.stdout }}"
   run_once: true

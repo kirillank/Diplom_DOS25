@@ -40,6 +40,11 @@
       - kubectl
     state: present
     update_cache: yes
+    lock_timeout: 300
+  register: kube_pkgs
+  until: kube_pkgs is succeeded
+  retries: 5   
+  delay: 60
 
 - name: Hold kube packages
   command: apt-mark hold {{ item }}
@@ -48,34 +53,45 @@
     - kubeadm
     - kubectl
 
-- name: Download kubeseal archive
+- name: Download kubeseal archive to control node
+  delegate_to: localhost
+  run_once: true
   get_url:
     url: "https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{ kubeseal_version }}/kubeseal-{{ kubeseal_version }}-linux-amd64.tar.gz"
     dest: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
-    mode: '0644'
+    mode: "0644"
+    timeout: 60
+  register: kubeseal_dl
+  until: kubeseal_dl is succeeded
+  retries: 5
+  delay: 15
+
+- name: Distribute kubeseal archive to nodes
+  copy:
+    src: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
+    dest: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
+    mode: "0644"
 
 - name: Extract kubeseal binary
+  become: yes
   unarchive:
     src: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
-    dest: "/tmp"
-    remote_src: yes
+    dest: "/usr/local/bin"
+    remote_src: yes        
+    extra_opts: ["--strip-components=1"]
+    creates: "/usr/local/bin/kubeseal"
+    mode: "0755"
 
-- name: Install kubeseal binary
-  copy:
-    src: "/tmp/kubeseal"
-    dest: "/usr/local/bin/kubeseal"
-    mode: '0755'
-    owner: root
-    group: root
-
-- name: Remove kubeseal archive
+- name: Remove kubeseal archive from nodes
   file:
     path: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
     state: absent
 
-- name: Remove temporary kubeseal binary
+- name: Remove kubeseal archive from control node
+  delegate_to: localhost
+  run_once: true
   file:
-    path: "/tmp/kubeseal"
+    path: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
     state: absent
 
 - name: Download Helm install script
