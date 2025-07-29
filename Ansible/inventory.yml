@@ -1,0 +1,25 @@
+all:
+  vars:
+    ansible_user: k8s   
+  children:
+
+    k8s:                
+      children:
+
+        masters:
+          hosts:
+            k8s-master:
+              ansible_host: 192.168.100.236
+              ansible_connection: local   
+
+        workers:
+          hosts:
+            k8s-jenkins:
+              ansible_host: 192.168.100.237
+            k8s-app:
+              ansible_host: 192.168.100.238
+            k8s-monitoring:
+              ansible_host: 192.168.100.239
+            k8s-logging:
+              ansible_host: 192.168.100.240
+
