@@ -72,13 +72,22 @@
     dest: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
     mode: "0644"
 
+- name: Extract kubeseal on control node
+  delegate_to: localhost
+  run_once: true
+  unarchive:
+    src: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
+    dest: "/usr/local/bin"
+    remote_src: yes            
+    mode: "0755"
+    creates: "/usr/local/bin/kubeseal"
+
 - name: Extract kubeseal binary
   become: yes
   unarchive:
     src: "/tmp/kubeseal-{{ kubeseal_version }}.tar.gz"
     dest: "/usr/local/bin"
     remote_src: yes        
-    extra_opts: ["--strip-components=1"]
     creates: "/usr/local/bin/kubeseal"
     mode: "0755"
 
