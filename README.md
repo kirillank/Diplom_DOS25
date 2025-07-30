@@ -92,7 +92,10 @@ $ cd Diplom_DOS25
 
 $ vi secrets.env.example
 
-# 3 · Run the bootstrap script (takes 10‑15 min on first run)
+# 3 · Run the script to install Jenkins and execute the plaubook
+$ ./install_Ansible_and_run_playbook.sh
+
+# 4 · Run the script to generate secrets and roll out Jenkins
 $ ./generate_secrets_up_jenkins.sh
 ```
 
