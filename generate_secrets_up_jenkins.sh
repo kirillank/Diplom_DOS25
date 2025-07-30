@@ -1,93 +1,124 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
 
-###############################################################################
-# 1. Generate and seal Secrets (Jenkins / Alertmanager / Grafana)
-###############################################################################
-EXAMPLE_FILE="./secrets.env.example"
-
-# Jenkins
+# Variables for secrets generation
+ALERT_NAMESPACE="alertmanager"
+GRAFANA_NAMESPACE="grafana"
 JENKINS_NAMESPACE="jenkins"
-JENKINS_SECRET_NAME="jenkins-secrets"
-JENKINS_DIR="k8s-manifests/jenkins"
-DEPLOY_DIR="k8s-manifests"
-
-# Alertmanager
-ALERT_NAMESPACE="monitoring"
-ALERT_SECRET_NAME="alertmanager-telegram"
+EXAMPLE_FILE="secrets.env.example"
+TMP="/tmp/k8s-secrets"
 ALERT_DIR="k8s-manifests/monitoring/alertmanager"
-
-# Grafana
-GRAFANA_NAMESPACE="monitoring"
-GRAFANA_SECRET_NAME="grafana-secret"
 GRAFANA_DIR="k8s-manifests/monitoring/grafana"
+JENKINS_DIR="k8s-manifests/jenkins"
+ALERT_SECRET_NAME="alertmanager-secret"
+GRAFANA_SECRET_NAME="grafana-secret"
+JENKINS_SECRET_NAME="jenkins-secrets"
 
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+# Variables for cluster readiness check
+EXPECTED_NODES=5
+RETRIES=20
+DELAY=15
 
-echo "▶️  Jenkins → Secret"
-kubectl create secret generic "$JENKINS_SECRET_NAME" \
-  --namespace "$JENKINS_NAMESPACE" \
-  --from-env-file="$EXAMPLE_FILE" \
-  --dry-run=client -o yaml > "$TMP/jenkins-secret.yaml"
-kubeseal --format=yaml < "$TMP/jenkins-secret.yaml" > "$JENKINS_DIR/sealedsecret.yaml"
-
-echo "▶️  Alertmanager → Secret"
-kubectl create secret generic "$ALERT_SECRET_NAME" \
-  --namespace "$ALERT_NAMESPACE" \
-  --from-env-file="$EXAMPLE_FILE" \
-  --dry-run=client -o yaml > "$TMP/alert-secret.yaml"
-kubeseal --format=yaml < "$TMP/alert-secret.yaml" > "$ALERT_DIR/sealedsecret.yaml"
-
-echo "▶️  Grafana → Secret"
-kubectl create secret generic "$GRAFANA_SECRET_NAME" \
-  --namespace "$GRAFANA_NAMESPACE" \
-  --from-env-file="$EXAMPLE_FILE" \
-  --dry-run=client -o yaml > "$TMP/grafana-secret.yaml"
-kubeseal --format=yaml < "$TMP/grafana-secret.yaml" > "$GRAFANA_DIR/sealedsecret.yaml"
-
-echo "✅  All SealedSecrets are ready."
+# Variables for deployment
+DEPLOY_DIR="k8s-manifests"
+MONITOR_DIR="k8s-manifests/monitoring"
+LOGGING_SCRIPT="k8s-manifests/logging/install_elk.sh"
 
 ###############################################################################
-# 2. Check that ALL 5 cluster nodes are Ready
+# 1. Generate SealedSecrets
+###############################################################################
+generate_secrets() {
+  echo "▶️  Generating SealedSecrets..."
+  mkdir -p "$TMP"
+  
+  # Jenkins
+  echo "▶️  Jenkins → Secret"
+  kubectl create secret generic "$JENKINS_SECRET_NAME" \
+    --namespace "$JENKINS_NAMESPACE" \
+    --from-env-file="$EXAMPLE_FILE" \
+    --dry-run=client -o yaml > "$TMP/jenkins-secret.yaml"
+  kubeseal --format=yaml < "$TMP/jenkins-secret.yaml" > "$JENKINS_DIR/sealedsecret.yaml"
+  
+  # Alertmanager
+  echo "▶️  Alertmanager → Secret"
+  kubectl create secret generic "$ALERT_SECRET_NAME" \
+    --namespace "$ALERT_NAMESPACE" \
+    --from-env-file="$EXAMPLE_FILE" \
+    --dry-run=client -o yaml > "$TMP/alert-secret.yaml"
+  kubeseal --format=yaml < "$TMP/alert-secret.yaml" > "$ALERT_DIR/sealedsecret.yaml"
+  
+  # Grafana
+  echo "▶️  Grafana → Secret"
+  kubectl create secret generic "$GRAFANA_SECRET_NAME" \
+    --namespace "$GRAFANA_NAMESPACE" \
+    --from-env-file="$EXAMPLE_FILE" \
+    --dry-run=client -o yaml > "$TMP/grafana-secret.yaml"
+  kubeseal --format=yaml < "$TMP/grafana-secret.yaml" > "$GRAFANA_DIR/sealedsecret.yaml"
+  
+  echo "✅  All SealedSecrets generated"
+  echo "▶️  Resetting values in $EXAMPLE_FILE"
+  sed -i 's/=.*/=<your_secret>/' "$EXAMPLE_FILE"
+  echo "✅  $EXAMPLE_FILE cleaned."
+}
+
+
+###############################################################################
+# 2. Check cluster readiness
 ###############################################################################
 wait_for_cluster_ready() {
-  local expected_nodes=5     
-  local retries=20           
-  local delay=15
+  echo "🔍 Waiting for all $EXPECTED_NODES nodes to reach Ready state..."
+  
+  for ((i=1; i<=RETRIES; i++)); do
+    total_nodes=$(kubectl get nodes --no-headers | wc -l)
+    ready_nodes=$(kubectl get nodes --no-headers | grep -c ' Ready ' || true)
 
-  echo "🔍 Waiting for all $expected_nodes nodes to reach Ready state…"
-
-  for ((i=1; i<=retries; i++)); do
-    total_nodes=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
-    ready_nodes=$(kubectl get nodes --no-headers 2>/dev/null | grep -c ' Ready ' || true)
-
-    if [[ $total_nodes -eq $expected_nodes && $ready_nodes -eq $expected_nodes ]]; then
-      echo "✅  All $ready_nodes/$expected_nodes nodes are Ready."
+    if [[ $total_nodes -eq $EXPECTED_NODES && $ready_nodes -eq $EXPECTED_NODES ]]; then
+      echo "✅  All $ready_nodes/$EXPECTED_NODES nodes are Ready."
       return 0
     fi
 
-    echo "⏳  Ready $ready_nodes/$expected_nodes nodes out of $total_nodes (attempt $i/$retries). Waiting ${delay}s…"
-    sleep "$delay"
+    echo "⏳  Ready $ready_nodes/$EXPECTED_NODES nodes (attempt $i/$RETRIES). Waiting ${DELAY}s..."
+    sleep "$DELAY"
   done
 
   echo "❌  Not all nodes became Ready within the time limit."
   exit 1
 }
 
+###############################################################################
+# 3. Deployment process
+###############################################################################
+deploy_jenkins() {
+  echo "▶️  Deploying Jenkins..."
+  kubectl apply -k "$DEPLOY_DIR"
+  echo "✅  Jenkins deployed"
+}
+
+deploy_monitoring() {
+  echo "▶️  Deploying Monitoring..."
+  kubectl apply -k "$MONITOR_DIR"
+  echo "✅  Monitoring deployed"
+}
+
+deploy_logging() {
+  echo "▶️  Starting ELK deployment in background..."
+  chmod +x "$LOGGING_SCRIPT"
+  nohup "$LOGGING_SCRIPT" >/dev/null 2>&1 &
+  echo "✅  ELK deployment started in background"
+}
+
+###############################################################################
+# Main execution
+###############################################################################
+
+# 1. Generate secrets (Jenkins first)
+generate_secrets
+
+# 2. Check cluster status
 wait_for_cluster_ready
 
-###############################################################################
-# 3. Apply Kubernetes manifests
-###############################################################################
-echo "▶️  Applying manifests: kubectl apply -k $DEPLOY_DIR"
-kubectl apply -k "$DEPLOY_DIR"
-echo "✅  Manifests applied."
+# 3. Deploy components in sequence
+deploy_jenkins
+deploy_monitoring
+deploy_logging
 
-###############################################################################
-# 6. Clean up secrets.env.example
-###############################################################################
-echo "▶️  Resetting values in $EXAMPLE_FILE"
-sed -i 's/=.*/=<your_secret>/' "$EXAMPLE_FILE"
-echo "✅  $EXAMPLE_FILE cleaned."
-
+echo "🚀  All components deployment initiated. Command line is available."

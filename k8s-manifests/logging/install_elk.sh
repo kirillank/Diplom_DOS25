@@ -35,7 +35,7 @@ done
 # флаги ожидания: 
 #  --wait          — дождаться Ready всех Deployment/StatefulSet и Services,
 #  --wait-for-jobs — дополнительно дождаться успешного завершения всех HelmJobhook’ов
-DEPLOY_OPTS="--wait --wait-for-jobs --timeout 10m"
+DEPLOY_OPTS="--wait-for-jobs --timeout 10m"
 for CH in "${CHARTS[@]}"; do
   echo "Deploying chart $CH (version $VER)…"
   helm upgrade --install "$CH" "${ROOT_DIR}/${CH}-${VER}.tgz" \
