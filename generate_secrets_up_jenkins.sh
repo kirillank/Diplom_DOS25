@@ -2,28 +2,7 @@
 set -euo pipefail
 
 ###############################################################################
-# 1. Install Ansible 
-###############################################################################
-echo "▶️  Installing Ansible…"
-export DEBIAN_FRONTEND=noninteractive
-sudo apt update -y
-sudo apt install -y software-properties-common
-sudo add-apt-repository --yes --update ppa:ansible/ansible
-sudo apt install -y ansible
-echo "✅  Ansible installed."
-
-###############################################################################
-# 2. Run the Ansible-playbook
-###############################################################################
-ANSIBLE_PLAYBOOK_PATH="playbook.yml"
-cd Ansible
-echo "▶️  Running playbook: $ANSIBLE_PLAYBOOK_PATH"
-ansible-playbook "$ANSIBLE_PLAYBOOK_PATH"
-echo "✅  Playbook finished."
-cd ..
-
-###############################################################################
-# 3. Generate and seal Secrets (Jenkins / Alertmanager / Grafana)
+# 1. Generate and seal Secrets (Jenkins / Alertmanager / Grafana)
 ###############################################################################
 EXAMPLE_FILE="./secrets.env.example"
 
@@ -70,11 +49,11 @@ kubeseal --format=yaml < "$TMP/grafana-secret.yaml" > "$GRAFANA_DIR/sealedsecret
 echo "✅  All SealedSecrets are ready."
 
 ###############################################################################
-# 4. Check that ALL 5 cluster nodes are Ready
+# 2. Check that ALL 5 cluster nodes are Ready
 ###############################################################################
 wait_for_cluster_ready() {
-  local expected_nodes=5          # how many nodes must be Ready
-  local retries=20                # 20 × 15 s = 5 min
+  local expected_nodes=5     
+  local retries=20           
   local delay=15
 
   echo "🔍 Waiting for all $expected_nodes nodes to reach Ready state…"
@@ -99,7 +78,7 @@ wait_for_cluster_ready() {
 wait_for_cluster_ready
 
 ###############################################################################
-# 5. Apply Kubernetes manifests
+# 3. Apply Kubernetes manifests
 ###############################################################################
 echo "▶️  Applying manifests: kubectl apply -k $DEPLOY_DIR"
 kubectl apply -k "$DEPLOY_DIR"
