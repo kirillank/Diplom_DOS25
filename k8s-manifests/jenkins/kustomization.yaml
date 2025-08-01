@@ -19,9 +19,6 @@ generatorOptions:
   disableNameSuffixHash: true
 
 images:
-  - name: AGENT_IMAGE
-    newName: kirillank04/kubectl-kustomize-helm
-    newTag: latest
 
   - name: JENKINS_IMAGE
     newName: kirillank04/jenkins
@@ -30,6 +27,3 @@ images:
   - name: WEBHOOK_IMAGE
     newName: webhookrelay/webhookrelayd
     newTag: latest
-
-
-

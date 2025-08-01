@@ -1,0 +1,140 @@
+---
+- name: CI/CD diploma full stack deployment
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - kubernetes.core 
+    - ansible.utils
+  vars:
+    # ───────── пользовательские переменные ─────────
+    expected_nodes: 5
+    node_ready_retries: 20
+    node_ready_delay: 15                     
+    tmp_dir: /tmp/k8s-secrets
+    project_root: "{{ playbook_dir }}"
+    example_env: "{{ playbook_dir }}/secrets.env.example"
+
+    metallb_version: v0.15.2
+    metallb_core_url: >
+      https://raw.githubusercontent.com/metallb/metallb/{{ metallb_version }}/config/manifests/metallb-native.yaml
+    metallb_core_manifest: "{{ tmp_dir }}/metallb-native.yaml"
+    metallb_config_dir:   "k8s-manifests/metallb/config"
+
+    deploy_dir:       "k8s-manifests"
+    jenkins_dir:      "k8s-manifests/jenkins"
+    monitoring_dir:   "k8s-manifests/monitoring"
+    logging_script:   "k8s-manifests/logging/install_elk.sh"
+
+    sealed_secrets:                   
+      - { ns: jenkins,      name: jenkins-secrets,       dest: "{{ jenkins_dir }}/sealedsecret.yaml" }
+      - { ns: monitoring,   name: alertmanager-telegram, dest: "k8s-manifests/monitoring/alertmanager/sealedsecret.yaml" }
+      - { ns: monitoring,   name: grafana-secret,        dest: "k8s-manifests/monitoring/grafana/sealedsecret.yaml" }
+
+  tasks:
+  # ────────────────────────────────────────────────
+  - name: Ensure tmp directory exists
+    ansible.builtin.file:
+      path: "{{ tmp_dir }}"
+      state: directory
+      mode: "0700"
+
+  # 1) Генерируем SealedSecrets
+  - name: Generate & seal secrets
+    ansible.builtin.shell: |
+      set -eu
+      kubectl create secret generic {{ item.name }} \
+        --namespace {{ item.ns }} \
+        --from-env-file={{ example_env }} \
+        --dry-run=client -o yaml |
+      kubeseal --format=yaml > {{ item.dest }}
+    args:
+      chdir: "{{ playbook_dir }}"
+    loop: "{{ sealed_secrets }}"
+
+   - name: Reset example file values
+     ansible.builtin.replace:
+       path: "{{ example_env }}"
+       regexp: "=.*$"
+      replace: "=<your_secret>"
+
+  # 2) Ждём, пока все ноды станут Ready
+  - name: Wait until all nodes are Ready
+    ansible.builtin.command: >
+      kubectl wait --for=condition=Ready node --all
+      --timeout={{ node_ready_retries * node_ready_delay }}s
+    register: wait_nodes
+    changed_when: false
+
+  # 3) Устанавливаем MetalLB:  ядро → ждём CRD → конфиг IP-пула
+  - name: Download MetalLB native manifest
+    ansible.builtin.get_url:
+      url:  "{{ metallb_core_url }}"
+      dest: "{{ metallb_core_manifest }}"
+      mode: "0644"
+
+  - name: Apply MetalLB core (CRDs + controller/speaker)
+    kubernetes.core.k8s:
+      state: present
+      src: "{{ metallb_core_manifest }}"
+
+  - name: Wait for MetalLB CRDs to be registered
+    kubernetes.core.k8s_info:
+      api_version: metallb.io/v1beta1
+      kind: IPAddressPool
+    register: crd_check
+    retries: 12
+    delay: 10
+    until: crd_check.resources is not none
+
+  - name: Apply MetalLB IPAddressPool + L2Advertisement
+    kubernetes.core.k8s:
+      state: present
+      definition: "{{ lookup('file', metallb_config_dir ~ '/ip-pool.yaml') }}"
+
+  # 4) Разворачиваем ingress-nginx (kustomize-overlay с LoadBalancer-сервисом)
+  - name: Apply ingress-nginx overlay
+    ansible.builtin.command: kubectl apply -k {{ project_root }}/k8s-manifests/ingress-nginx
+    register: ingress_apply
+    changed_when: "'created' in ingress_apply.stdout or 'configured' in ingress_apply.stdout"
+
+  - name: Wait for ingress controller pod ready
+    ansible.builtin.command: >
+      kubectl -n ingress-nginx
+      wait --for=condition=ready
+      pod -l app.kubernetes.io/component=controller
+      --timeout=180s
+
+  - name: Wait for admission webhook endpoint ready
+    ansible.builtin.shell: |
+      set -eu 
+      kubectl -n ingress-nginx get ep ingress-nginx-controller-admission \
+        -o jsonpath='{.subsets[0].addresses[0].ip}'
+    register: adm_ready
+    retries: 12
+    delay: 5
+    until: adm_ready.stdout != ""
+
+  # 5) Jenkins
+  - name: Deploy Jenkins (kustomize)
+    ansible.builtin.command: kubectl apply -k "{{ project_root }}/{{ deploy_dir }}"
+    register: jenkinscmd
+    changed_when: "'created' in jenkinscmd.stdout or 'configured' in jenkinscmd.stdout"
+
+  # 6) Monitoring
+  - name: Deploy monitoring stack (kustomize)
+    ansible.builtin.command: kubectl apply -k "{{ project_root }}/{{ monitoring_dir }}"
+    register: moncmd
+    changed_when: "'created' in moncmd.stdout or 'configured' in moncmd.stdout"
+
+  # 7) Логирование (ELK) — скрипт асинхронно
+  - name: Kick off ELK install script in background
+    ansible.builtin.command: "{{ project_root }}/{{ logging_script }}"
+    args:
+      chdir: "{{ lookup('ansible.builtin.dirname', logging_script) }}"
+    async: 0
+    poll: 0
+
+  - name: Finished
+    ansible.builtin.debug:
+      msg: "🚀  Jenkins, monitoring и ELK поставлены."
+

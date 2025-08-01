@@ -2,7 +2,7 @@ resources:
   - https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.13.0/deploy/static/provider/cloud/deploy.yaml
 
 patches:
-  - path: service-nodeport.yaml
+  - path: service-lb.yaml
     target:
       kind: Service
       name: ingress-nginx-controller

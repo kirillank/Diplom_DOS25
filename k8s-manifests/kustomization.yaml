@@ -1,6 +1,6 @@
 resources:
 - base
-  #- nodes
-- ingress-nginx
+- nodes
 - jenkins
 - storage/local-path-provisioner.yaml
+- metallb/config 
