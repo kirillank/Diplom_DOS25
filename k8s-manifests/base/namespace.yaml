@@ -11,7 +11,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: logging
+  name: elasticsearch 
 ---
 apiVersion: v1
 kind: Namespace

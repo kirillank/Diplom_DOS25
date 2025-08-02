@@ -6,7 +6,7 @@
     - kubernetes.core 
     - ansible.utils
   vars:
-    # ───────── пользовательские переменные ─────────
+
     expected_nodes: 5
     node_ready_retries: 20
     node_ready_delay: 15                     
@@ -19,6 +19,10 @@
       https://raw.githubusercontent.com/metallb/metallb/{{ metallb_version }}/config/manifests/metallb-native.yaml
     metallb_core_manifest: "{{ tmp_dir }}/metallb-native.yaml"
     metallb_config_dir:   "k8s-manifests/metallb/config"
+    elk_ver:  "8.5.1"
+    elk_ns:   "elasticsearch"
+    elk_charts: [elasticsearch, logstash, filebeat, kibana]
+    elk_wait_timeout: "10m" 
 
     deploy_dir:       "k8s-manifests"
     jenkins_dir:      "k8s-manifests/jenkins"
@@ -31,7 +35,6 @@
       - { ns: monitoring,   name: grafana-secret,        dest: "k8s-manifests/monitoring/grafana/sealedsecret.yaml" }
 
   tasks:
-  # ────────────────────────────────────────────────
   - name: Ensure tmp directory exists
     ansible.builtin.file:
       path: "{{ tmp_dir }}"
@@ -51,10 +54,10 @@
       chdir: "{{ playbook_dir }}"
     loop: "{{ sealed_secrets }}"
 
-   - name: Reset example file values
-     ansible.builtin.replace:
-       path: "{{ example_env }}"
-       regexp: "=.*$"
+  - name: Reset example file values
+    ansible.builtin.replace:
+      path: "{{ example_env }}"
+      regexp: "=.*$"
       replace: "=<your_secret>"
 
   # 2) Ждём, пока все ноды станут Ready
@@ -126,13 +129,60 @@
     register: moncmd
     changed_when: "'created' in moncmd.stdout or 'configured' in moncmd.stdout"
 
-  # 7) Логирование (ELK) — скрипт асинхронно
-  - name: Kick off ELK install script in background
-    ansible.builtin.command: "{{ project_root }}/{{ logging_script }}"
+  # 7) ELK stack
+  - name: ELK | create temp directory
+    ansible.builtin.tempfile:    
+      state: directory
+      suffix: elk-charts
+    register: elk_tmpdir
+
+  # 2. объявляем переменные, используя созданный путь
+  - name: ELK | set facts
+    ansible.builtin.set_fact:
+      elk_src_url: "https://github.com/elastic/helm-charts/archive/refs/tags/v{{ elk_ver }}.tar.gz"
+      elk_tmp:   "{{ elk_tmpdir.path }}"
+      elk_src_dir: "{{ elk_tmpdir.path }}/helm-charts-{{ elk_ver }}"
+      elk_pkg_dir: "{{ project_root }}/k8s-manifests/logging"
+      elk_values_dir: "{{ project_root }}/k8s-manifests/logging"
+
+  # 3. весь остальной блок переносим без изменений,
+  - name: ELK | download and unpack source charts
+    ansible.builtin.unarchive:
+      src: "{{ elk_src_url }}"
+      dest: "{{ elk_tmp }}"
+      remote_src: yes
+      creates: "{{ elk_src_dir }}"
+
+  - name: ELK | package Helm charts (idempotent)
+    ansible.builtin.command:
+      argv:
+        - helm
+        - package
+        - "{{ elk_src_dir }}/{{ item }}"
+        - --version
+        - "{{ elk_ver }}"
+        - --destination
+        - "{{ elk_pkg_dir }}"
     args:
-      chdir: "{{ lookup('ansible.builtin.dirname', logging_script) }}"
-    async: 0
-    poll: 0
+      creates: "{{ elk_pkg_dir }}/{{ item }}-{{ elk_ver }}.tgz"
+    loop: "{{ elk_charts }}"
+
+  - name: ELK | deploy / upgrade charts
+    kubernetes.core.helm:        
+      name: "{{ item }}"
+      chart_ref: "{{ elk_pkg_dir }}/{{ item }}-{{ elk_ver }}.tgz"
+      release_namespace: "{{ elk_ns }}"
+      values_files:
+        - "{{ elk_values_dir }}/{{ item }}/values.yaml"
+      wait: true
+      wait_timeout: "{{ elk_wait_timeout }}"
+    loop: "{{ elk_charts }}"
+
+  - name: ELK | set PV reclaim policy to Retain
+    ansible.builtin.shell: |
+      kubectl get pv -l app=elasticsearch -o name |
+      xargs -r -I {} kubectl patch {} -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+    changed_when: false
 
   - name: Finished
     ansible.builtin.debug:
