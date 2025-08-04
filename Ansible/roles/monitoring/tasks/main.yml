@@ -1,0 +1,5 @@
+- name: Deploy monitoring stack (kustomize)
+  ansible.builtin.command: kubectl apply -k "{{ monitoring_dir }}"
+  register: moncmd
+  changed_when: "'created' in moncmd.stdout or 'configured' in moncmd.stdout"
+

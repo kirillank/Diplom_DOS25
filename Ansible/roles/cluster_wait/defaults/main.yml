@@ -1,0 +1,3 @@
+expected_nodes: 5
+node_ready_retries: 20
+node_ready_delay: 15

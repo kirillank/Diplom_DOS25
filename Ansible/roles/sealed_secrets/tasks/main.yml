@@ -1,0 +1,23 @@
+- name: Ensure tmp directory exists
+  ansible.builtin.file:
+    path: "{{ tmp_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Generate & seal secrets
+  ansible.builtin.shell: |
+    set -eu
+    kubectl create secret generic {{ item.name }} \
+      --namespace {{ item.ns }} \
+      --from-env-file={{ example_env }} \
+      --dry-run=client -o yaml |
+    kubeseal --format=yaml > {{ item.dest }}
+  args:
+    chdir: "{{ project_root }}"
+  loop: "{{ sealed_secrets }}"
+
+- name: Reset example file values
+  ansible.builtin.replace:
+    path: "{{ example_env }}"
+    regexp: "=.*$"
+    replace: "=<your_secret>"

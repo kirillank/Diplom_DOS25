@@ -1,0 +1,4 @@
+elk_ver: 8.5.1
+elk_ns: elasticsearch
+elk_charts: [elasticsearch, logstash, filebeat, kibana]
+elk_wait_timeout: 10m

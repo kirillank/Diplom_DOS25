@@ -1,0 +1,5 @@
+- name: Deploy Jenkins (kustomize)
+  ansible.builtin.command: kubectl apply -k "{{ deploy_dir }}"
+  register: jenkinscmd
+  changed_when: "'created' in jenkinscmd.stdout or 'configured' in jenkinscmd.stdout"
+

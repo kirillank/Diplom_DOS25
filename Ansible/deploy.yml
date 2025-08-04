@@ -1,0 +1,23 @@
+- name: CI/CD diploma full stack deployment
+  hosts: masters 
+  gather_facts: false
+  collections:
+    - kubernetes.core
+    - ansible.utils
+
+  roles:
+    - sealed_secrets
+    - cluster_wait
+    - metallb
+    - ingress_nginx
+    - jenkins
+    - monitoring
+    - elk
+
+- name: Finished
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - ansible.builtin.debug:
+        msg: "🚀  Jenkins, monitoring and ELK deployed."
+

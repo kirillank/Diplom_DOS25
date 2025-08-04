@@ -1,0 +1,52 @@
+- name: ELK | create temp directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: elk-charts
+  register: elk_tmpdir
+
+- name: ELK | set facts
+  ansible.builtin.set_fact:
+    elk_src_url: "https://github.com/elastic/helm-charts/archive/refs/tags/v{{ elk_ver }}.tar.gz"
+    elk_tmp: "{{ elk_tmpdir.path }}"
+    elk_src_dir: "{{ elk_tmpdir.path }}/helm-charts-{{ elk_ver }}"
+    elk_pkg_dir: "{{ repo_root }}/k8s-manifests/logging"
+    elk_values_dir: "{{ repo_root }}/k8s-manifests/logging"
+
+- name: ELK | download and unpack source charts
+  ansible.builtin.unarchive:
+    src: "{{ elk_src_url }}"
+    dest: "{{ elk_tmp }}"
+    remote_src: yes
+    creates: "{{ elk_src_dir }}"
+
+- name: ELK | package Helm charts (idempotent)
+  ansible.builtin.command:
+    argv:
+      - helm
+      - package
+      - "{{ elk_src_dir }}/{{ item }}"
+      - --version
+      - "{{ elk_ver }}"
+      - --destination
+      - "{{ elk_pkg_dir }}"
+  args:
+    creates: "{{ elk_pkg_dir }}/{{ item }}-{{ elk_ver }}.tgz"
+  loop: "{{ elk_charts }}"
+
+- name: ELK | deploy / upgrade charts
+  kubernetes.core.helm:
+    name: "{{ item }}"
+    chart_ref: "{{ elk_pkg_dir }}/{{ item }}-{{ elk_ver }}.tgz"
+    release_namespace: "{{ elk_ns }}"
+    values_files:
+      - "{{ elk_values_dir }}/{{ item }}/values.yaml"
+    wait: true
+    wait_timeout: "{{ elk_wait_timeout }}"
+  loop: "{{ elk_charts }}"
+
+- name: ELK | set PV reclaim policy to Retain
+  ansible.builtin.shell: |
+    kubectl get pv -l app=elasticsearch -o name |
+    xargs -r -I {} kubectl patch {} -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+  changed_when: false
+

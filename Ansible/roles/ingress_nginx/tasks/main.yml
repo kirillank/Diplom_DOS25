@@ -1,0 +1,22 @@
+- name: Apply ingress-nginx overlay
+  ansible.builtin.command: kubectl apply -k {{ repo_root }}/k8s-manifests/ingress-nginx
+  register: ingress_apply
+  changed_when: "'created' in ingress_apply.stdout or 'configured' in ingress_apply.stdout"
+
+- name: Wait for ingress controller pod ready
+  ansible.builtin.command: >
+    kubectl -n ingress-nginx
+    wait --for=condition=ready
+    pod -l app.kubernetes.io/component=controller
+    --timeout=180s
+
+- name: Wait for admission webhook endpoint ready
+  ansible.builtin.shell: |
+    set -eu
+    kubectl -n ingress-nginx get ep ingress-nginx-controller-admission \
+      -o jsonpath='{.subsets[0].addresses[0].ip}'
+  register: adm_ready
+  retries: 12
+  delay: 5
+  until: adm_ready.stdout != ""
+

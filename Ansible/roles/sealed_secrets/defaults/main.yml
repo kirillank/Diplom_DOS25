@@ -1,0 +1,6 @@
+example_env: "{{ repo_root }}/secrets.env.example"
+
+sealed_secrets:
+  - { ns: jenkins,    name: jenkins-secrets,       dest: "{{ jenkins_dir }}/sealedsecret.yaml" }
+  - { ns: monitoring, name: alertmanager-telegram, dest: "{{ monitoring_dir }}/alertmanager/sealedsecret.yaml" }
+  - { ns: monitoring, name: grafana-secret,        dest: "{{ monitoring_dir }}/grafana/sealedsecret.yaml" }
