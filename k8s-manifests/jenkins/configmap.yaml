@@ -14,7 +14,7 @@ data:
         local:
           allowsSignup: false
           users:
-            - id: admin
+            - id: ${JENKINS_ADMIN_ID}
               password: ${JENKINS_ADMIN_PASSWORD}
       authorizationStrategy:
         loggedInUsersCanDoAnything:
