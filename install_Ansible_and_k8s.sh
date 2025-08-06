@@ -15,8 +15,7 @@ echo "✅  Ansible installed."
 ###############################################################################
 # 2. Run the Ansible-playbook
 ###############################################################################
-ANSIBLE_PLAYBOOK_PATH="playbook.yml"
-cd Ansible
+ANSIBLE_PLAYBOOK_PATH="Ansible/playbook.yml"
 echo "▶️  Running playbook: $ANSIBLE_PLAYBOOK_PATH"
 ansible-playbook "$ANSIBLE_PLAYBOOK_PATH"
 echo "✅  Playbook finished."
